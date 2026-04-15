@@ -1,0 +1,177 @@
+World Hub Process Rapport
+Svendeprøve til Datatekniker med Speciale i Programmering
+
+- Titel: RPG Wiki
+- Svendeprøve til Datatekniker med Speciale i Programmering
+- Elias Kouly
+
+=====================================
+INDHOLDSFORTEGNELSE (genereres automatisk)
+=====================================
+
+Indledning
+Denne proces rapport dokumenterer udviklingsforløbet bag World Hub en cloud-baseret web applikation udviklet som svendeprøveprojekt til uddannelsen Datatekniker med speciale i programmering. World Hub er en platform til rollespillere, der samler karakterer, verdener og lydfiler et sted. Rapporten dækker planlægning, teknologi, implementering, test og de udfordringer, jeg har mødt undervejs.
+
+Problemformulering
+I RPG verdenen som Dungeons & Dragons og Pathfinder er "World Building" en central del af oplevelsen. En Game Master bruger ofte hundredvis af timer på at skabe store verdener med unikke lokationer, politiske systemer og et hav af Non Player Characters (NPC'er).
+
+I dag er disse informationer typisk spredt over fysiske notesbøger, løse Word dokumenter og kaotiske Discord kanaler. Det fører til flere konkrete problemer:
+
+Manglende overblik: Det er svært at finde en specifik karakter hurtigt under en session.
+
+Tabt atmosfære: Man glemmer ofte karakterens personlighedstræk og andre informationer, når der går uger mellem sessioner (Pr gang man spiller).
+
+Isoleret viden: Spillerne har sjældent adgang til den information, de har "låst op" i verdenen, uden at spørge GM'en (Game master, ham som leder rollespillet) hver gang.
+
+På grund af dette har jeg formuleret følgende hovedspørgsmål:
+
+Hvordan kan man udvikle en web applikation, der gør det nemmere for rollespillere at organisere deres verdener og karakterer ved hjælp af visuelle kort, lydfiler og brugerstyring?
+
+Med følgende underspørgsmål:
+Database: Hvordan designer man en database, der kan holde styr på forskellige verdener og sikre, at karakterer og lydfiler er koblet rigtigt sammen?
+
+Funktionalitet: Hvordan implementerer man en løsning, hvor brugere kan uploade lydfiler og afspille dem direkte på et karakter-kort?
+
+Sikkerhed: Hvordan styrer man roller og rettigheder, så kun ejeren af en verden kan ændre i templates og slette indhold?
+
+Brugervenlighed: Hvordan kan man bruge farvekodning og et simpelt design til at give brugeren et hurtigt overblik over mange informationer?
+
+
+3. Projektbeskrivelse
+
+3.1 Overordnet beskrivelse
+WorldHub er en webapplikation, hvor rollespillere kan oprette og organisere deres spilverdener. En bruger kan oprette en verden, invitere andre spillere ind og udfylde den med karakterer i form af visuelle "Character Cards". Hvert kort kan indeholde navn, billede, beskrivelse og et lydklip af karakterens stemme. Platformen skelner mellem NPC'er (Non-Player Characters), som styres af GM'en, og PC'er (Player Characters), som tilhører spillerne.
+
+3.2 Formål og mål
+Formålet med WorldHub er at give rollespillere ét centralt sted, hvor de kan:
+- Oprette og administrere spilverdener
+- Oprette karakterer med visuelle kort, beskrivelser og lydklip
+- Styre hvem der har adgang til hvad via et rollebaseret rettighedssystem (Owner, Mod, Member)
+- Hurtigt finde information under en spilsession i stedet for at lede i notesbøger og dokumenter
+
+Målet for svendeprøveprojektet var at levere en fungerende prototype, der dækker kernefunktionaliteten: brugeroprettelse, login, verdensoprettelse, karakteroprettelse og rettighedsstyring.
+
+3.3 Afgrænsning
+For at holde projektet realistisk inden for tidsrammen har jeg afgrænset mig fra følgende:
+- AI-generering af NPC-beskrivelser (planlagt som fremtidig feature via Google Gemini)
+- Light/Dark mode toggle
+- Chat- eller beskedsystem mellem spillere
+- Avanceret søgefunktion på tværs af verdener
+- Mobilapp (platformen er responsiv, men kun udviklet som webapp)
+
+4. Projektstyring
+
+4.1 Metode - Scrum
+Til styring af projektet har jeg brugt Scrum som udviklingsmetode. Scrum er en agil projektmetode, hvor man arbejder i korte iterationer kaldet "sprints", typisk af 1-2 ugers varighed. Hver sprint har et klart mål, og ved sprintens afslutning evalueres hvad der er færdigt, og hvad der skal med videre.
+
+Jeg valgte Scrum fordi det giver struktur til et soloprojekt, uden at blive for tungt. Det tvinger mig til at prioritere opgaver og arbejde mod konkrete delmål, i stedet for at prøve at bygge alt på én gang. MoSCoW-prioriteringen fra kravspecifikationen blev brugt til at afgøre, hvilke user stories der kom med i hvilke sprints.
+
+Projektet blev opdelt i 6 sprints:
+
+Sprint 1 (Uge 1-2) - Fundament
+Opsætning af Next.js, Supabase, Tailwind CSS og bruger-authentication (login/registrering).
+
+Sprint 2 (Uge 3-4) - Verdener
+Brugere kan oprette verdener, se dem på en oversigtside og tilslutte sig eksisterende verdener.
+
+Sprint 3 (Uge 5-6) - Karakterer
+Oprettelse af NPC- og Player karakter-kort, visning på dashboard og redigering.
+
+Sprint 4 (Uge 7-8) - Admin & Rettigheder
+RBAC-systemet (Owner, Mod, Member), admin-panel og invitation af spillere.
+
+Sprint 5 (Uge 9-10) - Lyd & AI (Should-have)
+Upload og afspilning af lydklip samt AI-generering af NPC-beskrivelser via Google Gemini.
+
+Sprint 6 (Uge 11-12) - Test & Afslutning
+Funktionstest, bugfixes, deployment og rapportskrivning.
+
+En detaljeret oversigt over Product Backlog og sprintplaner med user stories, story points og status kan ses i bilag (scrum-board).
+
+   4.2 Planlægningsværktøjer
+       - GitHub Projects / Trello / andet board
+       - Tidsplan / sprint oversigt
+   4.3 Versionsstyring
+       - Git & GitHub
+       - Branching strategi
+   4.4 Kommunikation
+       - Discord / Teams / andet
+
+5. Teknologivalg
+   5.1 Hvorfor Next.js?
+   5.2 Hvorfor React?
+   5.3 Hvorfor Supabase?
+   5.4 Hvorfor Tailwind CSS?
+   5.5 Hvorfor TypeScript?
+
+6. Frontend
+   6.1 Oversigt over sider og navigation
+   6.2 Design (UI/UX)
+       - Wireframes / mockups
+       - Farvevalg og typografi
+       - Responsivt design
+   6.3 Komponentstruktur
+       - Genbrugelige komponenter
+       - Layout og routing (App Router)
+   6.4 Sider
+       6.4.1 Login-side
+       6.4.2 Opret konto
+       6.4.3 Profil-side
+       6.4.4 Verdensvalg (World Choice)
+       6.4.5 Verdens-dashboard
+       6.4.6 Admin-panel
+       6.4.7 Opret NPC
+       6.4.8 Opret spiller
+       6.4.9 Rediger karakter
+   6.5 State Management
+   6.6 Styling med Tailwind CSS
+   6.7 Ikoner (Lucide React)
+
+7. Backend / Database
+   7.1 Supabase opsætning
+   7.2 Authentication (login & registrering)
+   7.3 Database design
+       - ER-diagram
+       - Tabeller og relationer
+   7.4 Row Level Security (RLS)
+   7.5 API-kald fra frontend til Supabase
+   7.6 CRUD-operationer
+       - Create (opret verden, NPC, spiller)
+       - Read (hent data)
+       - Update (rediger karakter)
+       - Delete (slet data)
+
+8. Deployment / Hosting
+   8.1 Hosting-valg (Vercel / anden platform)
+   8.2 Opsætning og konfiguration
+   8.3 Miljøvariabler (.env)
+   8.4 Domæne (hvis relevant)
+
+9. Test
+   9.1 Teststrategi
+   9.2 Manuel test
+   9.3 Funktionstest af de vigtigste features
+   9.4 Brugertest (hvis udført)
+
+10. Udfordringer og løsninger
+    - Tekniske udfordringer undervejs
+    - Hvordan de blev løst
+
+11. Fremtid / Videreudvikling
+    - Funktioner der ikke nåede med
+    - Idéer til fremtidige forbedringer
+
+12. Konklusion
+    12.1 Opfyldelse af krav
+    12.2 Hvad har jeg lært?
+    12.3 Opsummering
+
+13. Kildeliste / Referencer
+
+14. Bilag (hvis relevant)
+    - Kode-eksempler
+    - Screenshots
+    - ER-diagram
+    - Wireframes
+
+

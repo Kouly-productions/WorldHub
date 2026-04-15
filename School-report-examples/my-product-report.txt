@@ -1,0 +1,94 @@
+=====================================
+PRODUKTRAPPORT - RPG Wiki
+Svendeprøve til Datatekniker med Speciale i Programmering
+=====================================
+
+FORSIDE
+- Titel: RPG Wiki
+- Svendeprøve til Datatekniker med Speciale i Programmering
+- Dit navn
+- Skole
+- Vejleder(e)
+- Afleveringsdato
+
+=====================================
+INDHOLDSFORTEGNELSE (genereres automatisk)
+=====================================
+
+1. Indledning
+   1.1 Om mig / gruppen
+   1.2 Formålet med dokumentet
+
+2. Baggrund
+   2.1 Problemformulering
+   2.2 Målgruppe
+   2.3 Løsningens omfang og afgrænsninger
+   2.4 Fremtidige løsninger / videreudvikling
+
+3. Generel beskrivelse
+   3.1 Løsningsskitse (overordnet arkitektur)
+   3.2 Aktør-kontekstdiagram
+   3.3 Aktørbeskrivelse
+       - Gæst (ikke logget ind)
+       - Bruger (spiller)
+       - Admin (verdens-ejer)
+   3.4 Use Case diagram
+   3.5 Hardware / Software miljø
+       - Next.js, React, TypeScript
+       - Supabase (database + auth)
+       - Tailwind CSS
+       - Hosting (Vercel / anden)
+   3.6 Sikkerhed
+       - Authentication via Supabase
+       - Row Level Security (RLS)
+       - Miljøvariabler
+   3.7 Testsituationer og acceptkriterier
+
+4. Funktionelle krav
+   4.1 Use Cases
+       4.1.1 Opret bruger / registrering
+       4.1.2 Login / Logout
+       4.1.3 Se og rediger profil
+       4.1.4 Opret ny verden
+       4.1.5 Tilslut eksisterende verden
+       4.1.6 Se verdens-dashboard
+       4.1.7 Opret NPC
+       4.1.8 Opret spiller-karakter
+       4.1.9 Rediger karakter
+       4.1.10 Slet karakter
+       4.1.11 Admin-panel (administrer verden)
+   4.2 Krav om funktionalitet (oversigt / MoSCoW)
+
+5. Non-funktionelle krav
+   - Performance
+   - Skalerbarhed
+   - Brugervenlighed
+   - Tilgængelighed (responsivt design)
+   - Sikkerhed
+
+6. Design krav
+   6.1 Brugerfladekrav
+   6.2 Wireframes / Mockups
+       6.2.1 Forside / Landing page
+       6.2.2 Login & Opret konto
+       6.2.3 Verdensvalg (World Choice)
+       6.2.4 Verdens-dashboard
+       6.2.5 Opret NPC / Spiller
+       6.2.6 Rediger karakter
+       6.2.7 Admin-panel
+   6.3 Brugeroplevelse (UX)
+       - Navigationsflow
+       - Farvevalg og typografi
+
+7. Database design
+   7.1 ER-diagram
+   7.2 Tabelbeskrivelser
+   7.3 Relationer og nøgler
+
+8. Dokumenthistorik
+
+9. Bilag
+   9.1 Definitioner og ordforklaringer
+   9.2 ER-diagram (fuld størrelse)
+   9.3 Tidsplan
+   9.4 Wireframes (fuld størrelse)

@@ -37,7 +37,7 @@ export default function LoginPage() {
         onSubmit={handleLogin}
         className="flex h-[70vh] w-[25vw] flex-col justify-between border-2 border-purple-400/20 rounded-[20px] bg-purple-700/50 shadow-[0_0_60px_10px_rgba(208,54,255,0.3)] backdrop-blur-sm p-8"
       >
-        {/* Top sektion */}
+        {/* Top section */}
         <div className="flex flex-col gap-2 text-center">
           <h1>Log in to account</h1>
           <p className="text-white/70 text-sm">
@@ -77,7 +77,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Error besked */}
+        {/* Error message */}
         {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 
         {/* Buttons */}
@@ -87,7 +87,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full h-12 bg-button/80 rounded-[5px] hover:bg-purple-400 cursor-pointer text-white font-bold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Logger ind..." : "Login"}
+            {loading ? "Logging in..." : "Login"}
           </button>
 
           <Link

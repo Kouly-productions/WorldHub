@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
-import { ArrowLeft, Sparkles, X, Send } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 const statColors: Record<string, string> = {
   Strength: "bg-red-700",
@@ -27,7 +27,7 @@ function SectionDivider({ label }: { label: string }) {
   );
 }
 
-export default function CreateNPCPage() {
+export default function CreatePlayerPage() {
   const router = useRouter();
   const params = useParams();
   const worldId = params.id as string;
@@ -57,60 +57,6 @@ export default function CreateNPCPage() {
     charisma: 10,
   });
 
-  const [aiModalOpen, setAiModalOpen] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-
-  async function handleGenerateWithAI() {
-    if (!aiPrompt.trim()) return;
-    setAiLoading(true);
-
-    try {
-      const res = await fetch("/api/generate-character", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: aiPrompt }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "AI generation failed");
-
-      setFormData((prev) => ({
-        ...prev,
-        name: data.name || prev.name,
-        biography: data.biography || prev.biography,
-        class: data.class || prev.class,
-        gender: data.gender || prev.gender,
-        age: data.age || prev.age,
-        level: data.level || prev.level,
-        health: data.health || prev.health,
-        full_health: data.full_health || prev.full_health,
-        rarity: data.rarity || prev.rarity,
-        relationship_status:
-          data.relationship_status || prev.relationship_status,
-        strength: Math.max(1, Math.min(30, data.strength || prev.strength)),
-        dexterity: Math.max(1, Math.min(30, data.dexterity || prev.dexterity)),
-        constitution: Math.max(
-          1,
-          Math.min(30, data.constitution || prev.constitution),
-        ),
-        intelligence: Math.max(
-          1,
-          Math.min(30, data.intelligence || prev.intelligence),
-        ),
-        wisdom: Math.max(1, Math.min(30, data.wisdom || prev.wisdom)),
-        charisma: Math.max(1, Math.min(30, data.charisma || prev.charisma)),
-      }));
-
-      setAiModalOpen(false);
-      setAiPrompt("");
-    } catch (err: any) {
-      alert("AI Error: " + err.message);
-    } finally {
-      setAiLoading(false);
-    }
-  }
-
   function updateStat(key: string, delta: number) {
     setFormData((prev) => ({
       ...prev,
@@ -126,22 +72,6 @@ export default function CreateNPCPage() {
     setLoading(true);
 
     try {
-      // Check for inappropriate content before saving
-      const modRes = await fetch("/api/moderate-character", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          biography: formData.biography,
-        }),
-      });
-      const modData = await modRes.json();
-      if (modData.flagged) {
-        alert("Character rejected: " + modData.reason);
-        setLoading(false);
-        return;
-      }
-
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -191,7 +121,7 @@ export default function CreateNPCPage() {
         wisdom: formData.wisdom,
         charisma: formData.charisma,
         portrait_url: portrait_url || null,
-        is_npc: true,
+        is_npc: false,
       });
 
       if (error) throw error;
@@ -237,23 +167,12 @@ export default function CreateNPCPage() {
 
           {/* Title */}
           <h1 className="text-3xl font-bold text-center text-white mb-2 tracking-wide">
-            Create New NPC
+            Create Player Character
           </h1>
           <div className="flex items-center gap-2 mb-2">
             <div className="flex-1 h-px bg-linear-to-r from-transparent via-amber-700/40 to-transparent" />
             <div className="w-2 h-2 rotate-45 border border-amber-700/50" />
             <div className="flex-1 h-px bg-linear-to-r from-transparent via-amber-700/40 to-transparent" />
-          </div>
-
-          {/* Create with AI button */}
-          <div className="flex justify-center mb-2">
-            <button
-              type="button"
-              onClick={() => setAiModalOpen(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-violet-900/60 via-purple-700/60 to-violet-900/60 hover:from-violet-800/80 hover:via-purple-600/80 hover:to-violet-800/80 border border-purple-500/30 rounded-sm text-sm font-bold text-purple-200 uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(168,85,247,0.1)] hover:shadow-[0_0_30px_rgba(168,85,247,0.2)]"
-            >
-              <Sparkles className="w-4 h-4" /> Create with AI
-            </button>
           </div>
 
           {/* ── BASIC INFO ── */}
@@ -556,77 +475,11 @@ export default function CreateNPCPage() {
               disabled={loading}
               className="w-full py-4 mt-4 bg-linear-to-r from-purple-900/80 via-purple-700/80 to-purple-900/80 hover:from-purple-800/90 hover:via-purple-600/90 hover:to-purple-800/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-sm transition-all border border-purple-500/30 uppercase tracking-widest text-sm shadow-[0_0_30px_rgba(168,85,247,0.15)]"
             >
-              {loading ? "Creating..." : "Create NPC"}
+              {loading ? "Creating..." : "Create Player"}
             </button>
           </div>
         </form>
       </div>
-
-      {/* AI Generation Modal */}
-      {aiModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1510] border-2 border-purple-500/30 rounded-sm p-6 w-full max-w-lg relative shadow-[0_0_60px_rgba(168,85,247,0.15)]">
-            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-purple-500/40" />
-            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-purple-500/40" />
-            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-purple-500/40" />
-            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-purple-500/40" />
-
-            <button
-              onClick={() => {
-                setAiModalOpen(false);
-                setAiPrompt("");
-              }}
-              className="absolute top-3 right-3 text-white/40 hover:text-white transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <Sparkles className="w-5 h-5 text-purple-400" />
-              <h2 className="text-lg font-bold text-white tracking-wide">
-                Generate NPC with AI
-              </h2>
-            </div>
-
-            <p className="text-sm text-white/40 mb-4">
-              Describe the character you want. The AI will fill in all the
-              fields for you.
-            </p>
-
-            <textarea
-              rows={4}
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              placeholder="e.g. A mysterious elven mage who guards an ancient library, very powerful but secretive..."
-              className="w-full bg-[#15120e] border border-purple-900/30 rounded px-4 py-3 text-white outline-none focus:border-purple-500/60 transition-colors text-sm resize-none placeholder:text-white/20 mb-4"
-              disabled={aiLoading}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleGenerateWithAI();
-                }
-              }}
-            />
-
-            <button
-              onClick={handleGenerateWithAI}
-              disabled={aiLoading || !aiPrompt.trim()}
-              className="w-full py-3 bg-linear-to-r from-purple-900/80 via-purple-700/80 to-purple-900/80 hover:from-purple-800/90 hover:via-purple-600/90 hover:to-purple-800/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-sm transition-all border border-purple-500/30 uppercase tracking-widest text-sm flex items-center justify-center gap-2"
-            >
-              {aiLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-purple-300/30 border-t-purple-300 rounded-full animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" /> Generate
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

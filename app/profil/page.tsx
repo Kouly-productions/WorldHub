@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
+import LoadingScreen from "@/components/LoadingScreen";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -23,23 +24,19 @@ export default function ProfilePage() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    router.push("/login"); // Send brugeren til login efter logout
-    router.refresh(); // Genindlæs siden for at opdatere auth state
+    router.push("/login");
+    router.refresh();
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen w-full bg-[#0a0a0a] flex items-center justify-center text-white">
-        Loader...
-      </div>
-    );
+    return <LoadingScreen message="Loading profile..." />;
   }
 
   return (
     <div className="min-h-screen w-full bg-[#0a0a0a] flex flex-col items-center justify-center font-sans text-white p-6">
       <div className="max-w-md w-full bg-[#1a1a1a] border border-purple-500/20 rounded-2xl p-8 shadow-[0_0_50px_rgba(168,85,247,0.1)]">
         <h1 className="text-3xl font-bold mb-2 bg-linear-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">
-          Din Profil
+          Your Profile
         </h1>
 
         {user ? (
@@ -53,17 +50,17 @@ export default function ProfilePage() {
               onClick={handleLogout}
               className="w-full py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 text-red-400 font-bold rounded-lg transition-all"
             >
-              Log ud
+              Log out
             </button>
           </div>
         ) : (
           <div className="text-center py-8">
-            <p className="mb-4">Du er ikke logget ind.</p>
+            <p className="mb-4">You are not logged in.</p>
             <Link
               href="/login"
               className="inline-block px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-bold transition-colors"
             >
-              Gå til login
+              Go to login
             </Link>
           </div>
         )}
@@ -73,7 +70,7 @@ export default function ProfilePage() {
             href="/worldChoice"
             className="text-white/50 hover:text-white transition-colors text-sm"
           >
-            ← Tilbage til verdensoversigt
+            ← Back to world overview
           </Link>
         </div>
       </div>

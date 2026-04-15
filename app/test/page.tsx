@@ -24,7 +24,7 @@ export default function Home() {
 
       alert("Success!");
     } catch (error: any) {
-      alert("Fejl: " + error.message);
+      alert("Error: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -37,7 +37,7 @@ export default function Home() {
         disabled={loading}
         className="w-64 h-12 border border-purple-400/30 rounded-[5px] hover:bg-white/10 cursor-pointer text-white/80 font-bold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
       >
-        {loading ? "Sender data..." : 'Send test Data "Hello World"'}
+        {loading ? "Sending data..." : 'Send test Data "Hello World"'}
       </button>
     </div>
   );
