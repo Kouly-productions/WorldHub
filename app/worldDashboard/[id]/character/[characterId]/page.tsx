@@ -110,9 +110,7 @@ export default function CharacterPage() {
 
     // If the field already has content, append with comma + space.
     // If the field is empty, just use the new item by itself.
-    const newValue = currentValue
-      ? `${currentValue}, ${trimmed}`
-      : trimmed;
+    const newValue = currentValue ? `${currentValue}, ${trimmed}` : trimmed;
 
     const { error } = await supabase
       .from("Characters")

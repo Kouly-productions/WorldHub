@@ -28,6 +28,20 @@ export default function AdminPanel() {
   const [worldName, setWorldName] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
 
+  // Max stat values for this world. Each character's stats can't go higher than these.
+  const [maxStats, setMaxStats] = useState({
+    max_strength: 30,
+    max_dexterity: 30,
+    max_constitution: 30,
+    max_intelligence: 30,
+    max_wisdom: 30,
+    max_charisma: 30,
+  });
+
+  // Classes are stored as a comma separated string in the World table. We split it into a list here.
+  const [classes, setClasses] = useState<string[]>([]);
+  const [newClass, setNewClass] = useState("");
+
   // Invite modal state
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,6 +75,25 @@ export default function AdminPanel() {
       }
       setWorldData(world);
       setWorldName(world.name || "");
+
+      // Load the max stats. If the columns don't exist yet (database hasn't been updated), fall back to 30.
+      setMaxStats({
+        max_strength: world.max_strength ?? 30,
+        max_dexterity: world.max_dexterity ?? 30,
+        max_constitution: world.max_constitution ?? 30,
+        max_intelligence: world.max_intelligence ?? 30,
+        max_wisdom: world.max_wisdom ?? 30,
+        max_charisma: world.max_charisma ?? 30,
+      });
+
+      // Load classes. The string "Warrior,Mage,..." gets split into an array.
+      const classList = world.classes
+        ? world.classes
+            .split(",")
+            .map((c: string) => c.trim())
+            .filter((c: string) => c.length > 0)
+        : [];
+      setClasses(classList);
 
       // Need to figure out what role the current user has
       let role = "member";
@@ -220,20 +253,54 @@ export default function AdminPanel() {
     }
     setSavingSettings(true);
     try {
+      // Save the world name, max stats and the classes list all in one update.
+      // Classes are joined back to a comma separated string for storage.
       const { error } = await supabase
         .from("World")
-        .update({ name: worldName.trim() })
+        .update({
+          name: worldName.trim(),
+          ...maxStats,
+          classes: classes.join(","),
+        })
         .eq("id", worldId);
 
       if (error) throw error;
 
-      setWorldData((prev: any) => ({ ...prev, name: worldName.trim() }));
+      setWorldData((prev: any) => ({
+        ...prev,
+        name: worldName.trim(),
+        ...maxStats,
+        classes: classes.join(","),
+      }));
       alert("Settings saved!");
     } catch (err: any) {
       alert("Couldn't save settings: " + err.message);
     } finally {
       setSavingSettings(false);
     }
+  }
+
+  // Update one of the max stat values. Min is 1, max is 100 to keep things reasonable.
+  function updateMaxStat(key: keyof typeof maxStats, value: number) {
+    const clamped = Math.max(1, Math.min(100, value));
+    setMaxStats((prev) => ({ ...prev, [key]: clamped }));
+  }
+
+  // Add a new class to the list. Trims whitespace and skips duplicates.
+  function handleAddClass() {
+    const trimmed = newClass.trim();
+    if (!trimmed) return;
+    if (classes.includes(trimmed)) {
+      alert("That class already exists.");
+      return;
+    }
+    setClasses((prev) => [...prev, trimmed]);
+    setNewClass("");
+  }
+
+  // Remove a class from the list by index.
+  function handleRemoveClass(index: number) {
+    setClasses((prev) => prev.filter((_, i) => i !== index));
   }
 
   const [deleting, setDeleting] = useState(false);
@@ -428,11 +495,12 @@ export default function AdminPanel() {
 
             {/* SETTINGS TAB */}
             {activeTab === "settings" && (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div className="border-b border-white/10 pb-4">
                   <h2 className="text-xl font-bold">World Settings</h2>
                 </div>
 
+                {/* World name */}
                 <div className="space-y-4 max-w-md">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-white/70">
@@ -445,10 +513,113 @@ export default function AdminPanel() {
                       className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg p-3 focus:border-orange-500 outline-none text-white"
                     />
                   </div>
+                </div>
+
+                {/* Max stats. Each input is 1-100. */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-bold mb-1">Max Stat Values</h3>
+                    <p className="text-sm text-white/50">
+                      Set the highest value each stat can reach in this world.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {[
+                      { key: "max_strength", label: "Strength", color: "text-red-400" },
+                      { key: "max_dexterity", label: "Dexterity", color: "text-green-400" },
+                      { key: "max_constitution", label: "Constitution", color: "text-yellow-400" },
+                      { key: "max_intelligence", label: "Intelligence", color: "text-purple-400" },
+                      { key: "max_wisdom", label: "Wisdom", color: "text-blue-400" },
+                      { key: "max_charisma", label: "Charisma", color: "text-pink-400" },
+                    ].map((stat) => (
+                      <div key={stat.key} className="space-y-2">
+                        <label className={`text-xs font-bold uppercase tracking-wider ${stat.color}`}>
+                          {stat.label}
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={maxStats[stat.key as keyof typeof maxStats]}
+                          onChange={(e) =>
+                            updateMaxStat(
+                              stat.key as keyof typeof maxStats,
+                              parseInt(e.target.value) || 1,
+                            )
+                          }
+                          className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg p-2 focus:border-orange-500 outline-none text-white"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Classes list. Owner/admin can add and remove. */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-bold mb-1">Available Classes</h3>
+                    <p className="text-sm text-white/50">
+                      The list of character classes that can be picked when creating a character.
+                    </p>
+                  </div>
+
+                  {/* Add new class */}
+                  <div className="flex gap-2 max-w-md">
+                    <input
+                      type="text"
+                      value={newClass}
+                      onChange={(e) => setNewClass(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddClass();
+                        }
+                      }}
+                      placeholder="Type a new class name..."
+                      className="flex-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-2.5 focus:border-orange-500 outline-none text-white"
+                    />
+                    <button
+                      onClick={handleAddClass}
+                      disabled={!newClass.trim()}
+                      className="px-4 py-2 bg-orange-600/20 hover:bg-orange-600/30 disabled:opacity-30 disabled:cursor-not-allowed border border-orange-500/40 rounded-lg text-sm font-bold text-orange-200 transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {/* Existing classes shown as removable tags */}
+                  <div className="flex flex-wrap gap-2">
+                    {classes.length === 0 ? (
+                      <p className="text-white/40 italic text-sm">
+                        No classes yet. Add one above.
+                      </p>
+                    ) : (
+                      classes.map((cls, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-1.5 group"
+                        >
+                          <span className="text-sm text-white/80">{cls}</span>
+                          <button
+                            onClick={() => handleRemoveClass(index)}
+                            className="text-white/40 hover:text-red-400 transition-colors"
+                            title="Remove class"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Save button at the bottom saves everything at once */}
+                <div className="pt-4 border-t border-white/10">
                   <button
                     onClick={handleSaveSettings}
                     disabled={savingSettings}
-                    className="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-bold transition-colors"
+                    className="px-6 py-3 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-bold transition-colors"
                   >
                     {savingSettings ? "Saving..." : "Save Settings"}
                   </button>

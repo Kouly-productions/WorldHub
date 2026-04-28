@@ -43,9 +43,12 @@ export default function WorldDashboard() {
     description: "",
     type: "misc",
     rarity: "Common",
-    image_url: "",
   });
   const [isCreatingItem, setIsCreatingItem] = useState(false);
+  // Holds the file the user picked for the item image
+  // Image gets uploaded when the form is submitted, not when picked.
+  const [itemImageFile, setItemImageFile] = useState<File | null>(null);
+  const [itemImagePreview, setItemImagePreview] = useState<string | null>(null);
 
   // Add-item-to-character picker state
   const [isAddItemPickerOpen, setIsAddItemPickerOpen] = useState(false);
@@ -109,13 +112,17 @@ export default function WorldDashboard() {
       description: "",
       type: "misc",
       rarity: "Common",
-      image_url: "",
     });
+    // Reset the picked file too so the modal starts fresh
+    setItemImageFile(null);
+    setItemImagePreview(null);
     setIsCreateItemModalOpen(true);
   }
 
   function closeCreateItemModal() {
     setIsCreateItemModalOpen(false);
+    setItemImageFile(null);
+    setItemImagePreview(null);
   }
 
   async function handleCreateItem(e: React.FormEvent) {
@@ -127,6 +134,30 @@ export default function WorldDashboard() {
     setIsCreatingItem(true);
 
     try {
+      // If the user picked a file, upload it to the items bucket and use the public URL.
+      // No file means no image, simple as that.
+      let image_url: string | null = null;
+
+      if (itemImageFile) {
+        const fileExt = itemImageFile.name.split(".").pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${worldId}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("items")
+          .upload(filePath, itemImageFile);
+
+        if (uploadError) {
+          throw new Error(`Couldn't upload image: ${uploadError.message}`);
+        }
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("items").getPublicUrl(filePath);
+
+        image_url = publicUrl;
+      }
+
       const { data, error } = await supabase
         .from("Items")
         .insert({
@@ -135,7 +166,7 @@ export default function WorldDashboard() {
           description: newItem.description.trim() || null,
           type: newItem.type,
           rarity: newItem.rarity,
-          image_url: newItem.image_url.trim() || null,
+          image_url,
         })
         .select()
         .single();
@@ -1090,17 +1121,57 @@ export default function WorldDashboard() {
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-amber-400/80 mb-1.5">
-                  Image URL (optional)
+                  Image (optional)
                 </label>
-                <input
-                  type="url"
-                  value={newItem.image_url}
-                  onChange={(e) =>
-                    setNewItem({ ...newItem, image_url: e.target.value })
-                  }
-                  placeholder="https://..."
-                  className="w-full bg-[#0f0d0a] border border-white/10 rounded-sm py-2 px-3 text-white text-sm outline-none focus:border-amber-500 transition-colors"
-                />
+
+                <div className="flex items-center gap-3">
+                  {/* Image preview / placeholder */}
+                  <div className="relative shrink-0">
+                    {itemImagePreview ? (
+                      <img
+                        src={itemImagePreview}
+                        alt="Preview"
+                        className="w-16 h-16 rounded object-cover border-2 border-amber-700/50"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded bg-[#0f0d0a] border-2 border-dashed border-amber-900/40 flex items-center justify-center">
+                        <span className="text-2xl opacity-30">📦</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* File picker. Hidden input + label trick gives us a styled button */}
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <label className="cursor-pointer w-full bg-[#0f0d0a] border border-white/10 hover:border-amber-500/50 rounded-sm py-2 px-3 text-white text-sm transition-colors text-center">
+                      {itemImageFile ? "Change image" : "Upload image"}
+                      <input
+                        type="file"
+                        accept="image/jpeg, image/png, image/jpg, image/webp"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setItemImageFile(file);
+                            setItemImagePreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {itemImageFile && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setItemImageFile(null);
+                          setItemImagePreview(null);
+                        }}
+                        className="text-xs text-white/40 hover:text-red-400 transition-colors text-left"
+                      >
+                        Remove image
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-2 pt-2">

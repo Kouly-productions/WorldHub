@@ -60,6 +60,70 @@ export default function EditCharacterPage() {
     charisma: 10,
   });
 
+  // Fetched from the World table. The owner sets these in the admin panel.
+  // Default to 30 in case the world hasn't been loaded yet or the columns are missing.
+  const [maxStats, setMaxStats] = useState({
+    strength: 30,
+    dexterity: 30,
+    constitution: 30,
+    intelligence: 30,
+    wisdom: 30,
+    charisma: 30,
+  });
+
+  // List of classes the user can pick from. Comes from the World table.
+  const [availableClasses, setAvailableClasses] = useState<string[]>([
+    "Warrior",
+    "Mage",
+    "Rogue",
+    "Cleric",
+    "Ranger",
+    "Paladin",
+    "Bard",
+    "Necromancer",
+    "Druid",
+    "Monk",
+  ]);
+
+  // Load the world's settings (max stats and class list) when the page opens.
+  useEffect(() => {
+    async function loadWorldSettings() {
+      if (!worldId) return;
+
+      const { data: world } = await supabase
+        .from("World")
+        .select(
+          "max_strength, max_dexterity, max_constitution, max_intelligence, max_wisdom, max_charisma, classes",
+        )
+        .eq("id", worldId)
+        .single();
+
+      if (world) {
+        setMaxStats({
+          strength: world.max_strength ?? 30,
+          dexterity: world.max_dexterity ?? 30,
+          constitution: world.max_constitution ?? 30,
+          intelligence: world.max_intelligence ?? 30,
+          wisdom: world.max_wisdom ?? 30,
+          charisma: world.max_charisma ?? 30,
+        });
+
+        if (world.classes) {
+          const list = world.classes
+            .split(",")
+            .map((c: string) => c.trim())
+            .filter((c: string) => c.length > 0);
+
+          if (list.length > 0) {
+            setAvailableClasses(list);
+          }
+        }
+      }
+    }
+
+    loadWorldSettings();
+  }, [worldId]);
+
   useEffect(() => {
     async function fetchCharacter() {
       try {
@@ -109,11 +173,13 @@ export default function EditCharacterPage() {
   }, [characterId]);
 
   function updateStat(key: string, delta: number) {
+    // Use the world's specific max for this stat
+    const max = maxStats[key as keyof typeof maxStats] ?? 30;
     setFormData((prev) => ({
       ...prev,
       [key]: Math.max(
         1,
-        Math.min(30, (prev[key as keyof typeof prev] as number) + delta),
+        Math.min(max, (prev[key as keyof typeof prev] as number) + delta),
       ),
     }));
   }
@@ -291,16 +357,17 @@ export default function EditCharacterPage() {
                   }
                   className={selectClass}
                 >
-                  <option value="Warrior">Warrior</option>
-                  <option value="Mage">Mage</option>
-                  <option value="Rogue">Rogue</option>
-                  <option value="Cleric">Cleric</option>
-                  <option value="Ranger">Ranger</option>
-                  <option value="Paladin">Paladin</option>
-                  <option value="Bard">Bard</option>
-                  <option value="Necromancer">Necromancer</option>
-                  <option value="Druid">Druid</option>
-                  <option value="Monk">Monk</option>
+                  {/* Classes come from the world settings, set by owner/admin. */}
+                  {/* If the character's saved class is no longer in the list, we still show it as an option so we don't lose the value. */}
+                  {!availableClasses.includes(formData.class) &&
+                    formData.class && (
+                      <option value={formData.class}>{formData.class}</option>
+                    )}
+                  {availableClasses.map((cls) => (
+                    <option key={cls} value={cls}>
+                      {cls}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -445,6 +512,8 @@ export default function EditCharacterPage() {
               const label = key.charAt(0).toUpperCase() + key.slice(1);
               const value = formData[key];
               const barColor = statColors[label] || "bg-gray-600";
+              // Read the max for this specific stat from the world settings
+              const max = maxStats[key];
 
               return (
                 <div
@@ -454,7 +523,7 @@ export default function EditCharacterPage() {
                   <div className="relative flex-1 flex items-center h-11">
                     <div
                       className={`absolute inset-y-0 left-0 ${barColor} opacity-30`}
-                      style={{ width: `${(value / 30) * 100}%` }}
+                      style={{ width: `${(value / max) * 100}%` }}
                     />
                     <span className="relative text-xs font-bold text-white/80 pl-3 uppercase tracking-wider">
                       {label}
@@ -472,14 +541,14 @@ export default function EditCharacterPage() {
                     <input
                       type="number"
                       min="1"
-                      max="30"
+                      max={max}
                       value={value}
                       onChange={(e) => {
                         const v = parseInt(e.target.value);
                         if (!isNaN(v))
                           setFormData((prev) => ({
                             ...prev,
-                            [key]: Math.max(1, Math.min(30, v)),
+                            [key]: Math.max(1, Math.min(max, v)),
                           }));
                       }}
                       className="w-10 h-11 bg-transparent text-center text-sm font-black text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -497,7 +566,7 @@ export default function EditCharacterPage() {
             })}
           </div>
 
-          {/* ── BIOGRAPHY & EXTRAS ── */}
+          {/* - BIOGRAPHY & EXTRAS - */}
           <SectionDivider label="Biography & Extras" />
 
           <div className="space-y-4">
@@ -526,7 +595,6 @@ export default function EditCharacterPage() {
                 placeholder="Enter URL..."
               />
             </div>
-
           </div>
 
           {/* Submit */}
