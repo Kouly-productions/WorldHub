@@ -5,6 +5,11 @@ import { Plus, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  DEFAULT_ATTRIBUTES,
+  DEFAULT_CLASSES,
+  DEFAULT_RARITIES,
+} from "@/lib/worldDefaults";
 import LoadingScreen from "@/components/LoadingScreen";
 
 export default function worldChoice() {
@@ -108,11 +113,17 @@ export default function worldChoice() {
     } = await supabase.auth.getUser();
 
     if (user) {
+      // Seed every new world with the default attributes, rarities and
+      // classes so admin and create pages never see empty/inconsistent
+      // lists. The defaults live in lib/worldDefaults.ts
       const { data, error } = await supabase
         .from("World")
         .insert({
           name: newWorldName,
           owner_id: user.id,
+          attributes: DEFAULT_ATTRIBUTES,
+          rarities: DEFAULT_RARITIES,
+          classes: DEFAULT_CLASSES.join(","),
         })
         .select()
         .single();

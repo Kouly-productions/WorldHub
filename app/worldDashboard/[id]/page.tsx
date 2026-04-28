@@ -6,6 +6,10 @@ import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import { Search, X, Backpack, Plus, Trash2 } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
+import {
+  DEFAULT_ATTRIBUTES,
+  type WorldAttribute,
+} from "@/lib/worldDefaults";
 
 export default function WorldDashboard() {
   const params = useParams();
@@ -454,6 +458,33 @@ export default function WorldDashboard() {
     },
   };
 
+  // The list of attributes for this world. Falls back to the shared default
+  // attributes (using legacy column names as IDs) so old characters still
+  // render correctly even before the admin defines anything.
+  const worldAttributes: WorldAttribute[] = (() => {
+    if (
+      !Array.isArray(worldData?.attributes) ||
+      worldData.attributes.length === 0
+    ) {
+      return DEFAULT_ATTRIBUTES;
+    }
+    const cleaned: WorldAttribute[] = worldData.attributes
+      .filter((a: any) => a && typeof a.name === "string" && a.name.trim())
+      .map((a: any) => ({
+        id:
+          typeof a.id === "string" && a.id.trim()
+            ? a.id.trim()
+            : a.name.trim().toLowerCase().replace(/\s+/g, "_"),
+        name: a.name.trim(),
+        color: typeof a.color === "string" ? a.color : "#9ca3af",
+        max:
+          typeof a.max === "number" && a.max > 0
+            ? Math.min(999, Math.floor(a.max))
+            : 30,
+      }));
+    return cleaned.length > 0 ? cleaned : DEFAULT_ATTRIBUTES;
+  })();
+
   // Build a style object for a character's rarity based on the world's
   // configured rarities (admin-defined). Falls back to a neutral gray if
   // the rarity name isn't in the world's list (e.g. legacy character).
@@ -624,39 +655,39 @@ export default function WorldDashboard() {
           <div className="flex-1 h-px bg-linear-to-r from-transparent via-white/20 to-transparent" />
         </div>
 
-        {/* Stat boxes */}
-        <div className="px-3 pb-2 pt-1 grid grid-cols-3 gap-1.5">
-          {[
-            { label: "STR", value: char.strength, color: "text-red-400" },
-            { label: "DEX", value: char.dexterity, color: "text-green-400" },
-            {
-              label: "CON",
-              value: char.constitution,
-              color: "text-yellow-400",
-            },
-            {
-              label: "INT",
-              value: char.intelligence,
-              color: "text-purple-400",
-            },
-            { label: "WIS", value: char.wisdom, color: "text-blue-400" },
-            { label: "CHA", value: char.charisma, color: "text-pink-400" },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-[#111] border border-white/10 rounded-sm py-1.5 text-center"
-            >
-              <p
-                className={`text-[8px] font-bold uppercase tracking-wider ${stat.color}`}
-              >
-                {stat.label}
-              </p>
-              <p className="text-sm font-black text-white">
-                {stat.value ?? "-"}
-              </p>
-            </div>
-          ))}
-        </div>
+        {/* Stat boxes - dynamically built from world.attributes. Each box
+            shows a short 3-letter label + the character's value for that
+            attribute. Falls back to legacy strength/dex/etc. columns for
+            characters that haven't been migrated to attribute_values yet. */}
+        {worldAttributes.length > 0 && (
+          <div className="px-3 pb-2 pt-1 grid grid-cols-3 gap-1.5">
+            {worldAttributes.map((attr) => {
+              // Prefer the JSONB attribute_values, then the legacy column with
+              // the matching name (for back-compat).
+              const value =
+                char.attribute_values?.[attr.id] ?? char[attr.id] ?? null;
+              // Short 3-letter label for the box (e.g. "Strength" -> "STR").
+              const shortLabel = attr.name.slice(0, 3).toUpperCase();
+              return (
+                <div
+                  key={attr.id}
+                  className="bg-[#111] border border-white/10 rounded-sm py-1.5 text-center"
+                  title={attr.name}
+                >
+                  <p
+                    className="text-[8px] font-bold uppercase tracking-wider"
+                    style={{ color: attr.color }}
+                  >
+                    {shortLabel}
+                  </p>
+                  <p className="text-sm font-black text-white">
+                    {value ?? "-"}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Bottom row: "by" + actions */}
         <div className="px-4 pb-3 pt-1 flex items-center justify-between relative z-20">

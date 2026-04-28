@@ -3,17 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  DEFAULT_ATTRIBUTES,
+  DEFAULT_CLASSES,
+  DEFAULT_RARITIES,
+  type WorldAttribute,
+} from "@/lib/worldDefaults";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-
-const statColors: Record<string, string> = {
-  Strength: "bg-red-700",
-  Dexterity: "bg-green-700",
-  Constitution: "bg-yellow-600",
-  Intelligence: "bg-purple-700",
-  Wisdom: "bg-blue-700",
-  Charisma: "bg-pink-700",
-};
 
 function SectionDivider({ label }: { label: string }) {
   return (
@@ -49,49 +46,26 @@ export default function CreatePlayerPage() {
     age: 20,
     health: 100,
     full_health: 100,
-    strength: 10,
-    dexterity: 10,
-    constitution: 10,
-    intelligence: 10,
-    wisdom: 10,
-    charisma: 10,
   });
 
-  // Fetched from the World table. The owner sets these in the admin panel.
-  // Default to 30 in case the world hasn't been loaded yet or the columns are missing.
-  const [maxStats, setMaxStats] = useState({
-    strength: 30,
-    dexterity: 30,
-    constitution: 30,
-    intelligence: 30,
-    wisdom: 30,
-    charisma: 30,
-  });
+  // Character's attribute values, keyed by attribute id from world.attributes.
+  const [attributeValues, setAttributeValues] = useState<
+    Record<string, number>
+  >({});
+
+  // List of attributes the character can have. Loaded from world.attributes
+  // (JSONB) when the page mounts. Defaults live in lib/worldDefaults.ts.
+  const [attributes, setAttributes] =
+    useState<WorldAttribute[]>(DEFAULT_ATTRIBUTES);
 
   // List of classes the user can pick from. Comes from the World table.
-  const [availableClasses, setAvailableClasses] = useState<string[]>([
-    "Warrior",
-    "Mage",
-    "Rogue",
-    "Cleric",
-    "Ranger",
-    "Paladin",
-    "Bard",
-    "Necromancer",
-    "Druid",
-    "Monk",
-  ]);
+  // Defaults to the shared list in lib/worldDefaults.ts.
+  const [availableClasses, setAvailableClasses] =
+    useState<string[]>(DEFAULT_CLASSES);
 
   // List of rarities the user can pick from. Loaded from World.rarities (JSONB).
-  // Each rarity has a name and a hex color used for visual styling.
-  type Rarity = { name: string; color: string };
-  const [availableRarities, setAvailableRarities] = useState<Rarity[]>([
-    { name: "Common", color: "#9ca3af" },
-    { name: "Uncommon", color: "#22c55e" },
-    { name: "Rare", color: "#3b82f6" },
-    { name: "Epic", color: "#a855f7" },
-    { name: "Legendary", color: "#f59e0b" },
-  ]);
+  const [availableRarities, setAvailableRarities] =
+    useState<typeof DEFAULT_RARITIES>(DEFAULT_RARITIES);
 
   // Load the world's settings (max stats and class list) when the page opens.
   useEffect(() => {
@@ -100,21 +74,40 @@ export default function CreatePlayerPage() {
 
       const { data: world } = await supabase
         .from("World")
-        .select(
-          "max_strength, max_dexterity, max_constitution, max_intelligence, max_wisdom, max_charisma, classes, rarities",
-        )
+        .select("classes, rarities, attributes")
         .eq("id", worldId)
         .single();
 
       if (world) {
-        setMaxStats({
-          strength: world.max_strength ?? 30,
-          dexterity: world.max_dexterity ?? 30,
-          constitution: world.max_constitution ?? 30,
-          intelligence: world.max_intelligence ?? 30,
-          wisdom: world.max_wisdom ?? 30,
-          charisma: world.max_charisma ?? 30,
+        // Build attributes list, either from world.attributes or fall back
+        // to the default 6 D&D style stats.
+        let attrList: WorldAttribute[] = DEFAULT_ATTRIBUTES;
+        if (Array.isArray(world.attributes) && world.attributes.length > 0) {
+          const cleaned: WorldAttribute[] = world.attributes
+            .filter(
+              (a: any) => a && typeof a.name === "string" && a.name.trim(),
+            )
+            .map((a: any) => ({
+              id:
+                typeof a.id === "string" && a.id.trim()
+                  ? a.id.trim()
+                  : a.name.trim().toLowerCase().replace(/\s+/g, "_"),
+              name: a.name.trim(),
+              color: typeof a.color === "string" ? a.color : "#9ca3af",
+              max:
+                typeof a.max === "number" && a.max > 0
+                  ? Math.min(999, Math.floor(a.max))
+                  : 30,
+            }));
+          if (cleaned.length > 0) attrList = cleaned;
+        }
+        setAttributes(attrList);
+
+        const seeded: Record<string, number> = {};
+        attrList.forEach((a) => {
+          seeded[a.id] = Math.min(10, a.max);
         });
+        setAttributeValues(seeded);
 
         if (world.classes) {
           const list = world.classes
@@ -147,7 +140,7 @@ export default function CreatePlayerPage() {
           if (cleaned.length > 0) {
             setAvailableRarities(cleaned);
             setFormData((prev) =>
-              cleaned.some((r: Rarity) => r.name === prev.rarity)
+              cleaned.some((r) => r.name === prev.rarity)
                 ? prev
                 : { ...prev, rarity: cleaned[0].name },
             );
@@ -159,15 +152,20 @@ export default function CreatePlayerPage() {
     loadWorldSettings();
   }, [worldId]);
 
-  function updateStat(key: string, delta: number) {
-    // Use the world's specific max for this stat instead of the old hardcoded 30.
-    const max = maxStats[key as keyof typeof maxStats] ?? 30;
-    setFormData((prev) => ({
+  function updateAttributeValue(attr: WorldAttribute, delta: number) {
+    setAttributeValues((prev) => {
+      const current = prev[attr.id] ?? 1;
+      return {
+        ...prev,
+        [attr.id]: Math.max(1, Math.min(attr.max, current + delta)),
+      };
+    });
+  }
+
+  function setAttributeValue(attr: WorldAttribute, value: number) {
+    setAttributeValues((prev) => ({
       ...prev,
-      [key]: Math.max(
-        1,
-        Math.min(max, (prev[key as keyof typeof prev] as number) + delta),
-      ),
+      [attr.id]: Math.max(1, Math.min(attr.max, value)),
     }));
   }
 
@@ -203,6 +201,21 @@ export default function CreatePlayerPage() {
         portrait_url = publicUrl;
       }
 
+      const legacyKeys = [
+        "strength",
+        "dexterity",
+        "constitution",
+        "intelligence",
+        "wisdom",
+        "charisma",
+      ];
+      const legacyColumns: Record<string, number> = {};
+      legacyKeys.forEach((key) => {
+        if (attributeValues[key] != null) {
+          legacyColumns[key] = attributeValues[key];
+        }
+      });
+
       const { error } = await supabase.from("Characters").insert({
         world_id: worldId,
         user_id: user.id,
@@ -218,12 +231,8 @@ export default function CreatePlayerPage() {
         age: formData.age,
         health: formData.health,
         full_health: formData.full_health,
-        strength: formData.strength,
-        dexterity: formData.dexterity,
-        constitution: formData.constitution,
-        intelligence: formData.intelligence,
-        wisdom: formData.wisdom,
-        charisma: formData.charisma,
+        attribute_values: attributeValues,
+        ...legacyColumns,
         portrait_url: portrait_url || null,
         is_npc: false,
       });
@@ -467,76 +476,67 @@ export default function CreatePlayerPage() {
           </label>
 
           {/* ── ATTRIBUTES ── */}
-          <SectionDivider label="Attributes" />
+          {attributes.length > 0 && (
+            <>
+              <SectionDivider label="Attributes" />
 
-          <div className="grid grid-cols-2 gap-3">
-            {(
-              [
-                "strength",
-                "dexterity",
-                "constitution",
-                "intelligence",
-                "wisdom",
-                "charisma",
-              ] as const
-            ).map((key) => {
-              const label = key.charAt(0).toUpperCase() + key.slice(1);
-              const value = formData[key];
-              const barColor = statColors[label] || "bg-gray-600";
-              // Read the max for this specific stat from the world settings
-              const max = maxStats[key];
-
-              return (
-                <div
-                  key={key}
-                  className="flex items-center bg-[#15120e] border border-amber-900/20 rounded overflow-hidden"
-                >
-                  {/* Stat bar background */}
-                  <div className="relative flex-1 flex items-center h-11">
+              <div className="grid grid-cols-2 gap-3">
+                {attributes.map((attr) => {
+                  const value = attributeValues[attr.id] ?? 1;
+                  return (
                     <div
-                      className={`absolute inset-y-0 left-0 ${barColor} opacity-30`}
-                      style={{ width: `${(value / max) * 100}%` }}
-                    />
-                    <span className="relative text-xs font-bold text-white/80 pl-3 uppercase tracking-wider">
-                      {label}
-                    </span>
-                  </div>
+                      key={attr.id}
+                      className="flex items-center bg-[#15120e] border border-amber-900/20 rounded overflow-hidden"
+                    >
+                      <div className="relative flex-1 flex items-center h-11">
+                        <div
+                          className="absolute inset-y-0 left-0 opacity-30"
+                          style={{
+                            width: `${(value / attr.max) * 100}%`,
+                            backgroundColor: attr.color,
+                          }}
+                        />
+                        <span
+                          className="relative text-xs font-bold pl-3 uppercase tracking-wider"
+                          style={{ color: attr.color }}
+                        >
+                          {attr.name}
+                        </span>
+                      </div>
 
-                  <div className="flex items-center shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => updateStat(key, -1)}
-                      className="w-7 h-11 bg-amber-900/20 hover:bg-amber-700/30 text-amber-300/70 font-bold text-base transition-colors border-l border-amber-900/20"
-                    >
-                      −
-                    </button>
-                    <input
-                      type="number"
-                      min="1"
-                      max={max}
-                      value={value}
-                      onChange={(e) => {
-                        const v = parseInt(e.target.value);
-                        if (!isNaN(v))
-                          setFormData((prev) => ({
-                            ...prev,
-                            [key]: Math.max(1, Math.min(max, v)),
-                          }));
-                      }}
-                      className="w-10 h-11 bg-transparent text-center text-sm font-black text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => updateStat(key, 1)}
-                      className="w-7 h-11 bg-amber-900/20 hover:bg-amber-700/30 text-amber-300/70 font-bold text-base transition-colors border-l border-amber-900/20"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                      <div className="flex items-center shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => updateAttributeValue(attr, -1)}
+                          className="w-7 h-11 bg-amber-900/20 hover:bg-amber-700/30 text-amber-300/70 font-bold text-base transition-colors border-l border-amber-900/20"
+                        >
+                          −
+                        </button>
+                        <input
+                          type="number"
+                          min={1}
+                          max={attr.max}
+                          value={value}
+                          onChange={(e) => {
+                            const v = parseInt(e.target.value);
+                            if (!isNaN(v)) setAttributeValue(attr, v);
+                          }}
+                          className="w-12 h-11 bg-transparent text-center text-sm font-black text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => updateAttributeValue(attr, 1)}
+                          className="w-7 h-11 bg-amber-900/20 hover:bg-amber-700/30 text-amber-300/70 font-bold text-base transition-colors border-l border-amber-900/20"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           {/* ── BIOGRAPHY & EXTRAS ── */}
           <SectionDivider label="Biography & Extras" />

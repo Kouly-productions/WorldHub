@@ -12,8 +12,16 @@ import {
   Trash2,
   X,
   Search,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
+import {
+  DEFAULT_ATTRIBUTES,
+  DEFAULT_RARITIES,
+  type WorldAttribute,
+  type WorldRarity,
+} from "@/lib/worldDefaults";
 
 export default function AdminPanel() {
   const params = useParams();
@@ -28,15 +36,12 @@ export default function AdminPanel() {
   const [worldName, setWorldName] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
 
-  // Max stat values for this world. Each character's stats can't go higher than these.
-  const [maxStats, setMaxStats] = useState({
-    max_strength: 30,
-    max_dexterity: 30,
-    max_constitution: 30,
-    max_intelligence: 30,
-    max_wisdom: 30,
-    max_charisma: 30,
-  });
+  // Attributes are stored as a JSONB array of { id, name, color, max } in the World table.
+  // The default list lives in lib/worldDefaults.ts and is also used by every other page that reads world attributes.
+  const [attributes, setAttributes] = useState<WorldAttribute[]>([]);
+  const [newAttrName, setNewAttrName] = useState("");
+  const [newAttrColor, setNewAttrColor] = useState("#9ca3af");
+  const [newAttrMax, setNewAttrMax] = useState(30);
 
   // Classes are stored as a comma separated string in the World table. We split it into a list here.
   const [classes, setClasses] = useState<string[]>([]);
@@ -44,15 +49,7 @@ export default function AdminPanel() {
 
   // Rarities are stored as a JSONB array of { name, color } in the World table.
   // The color is a hex string used to style character cards in this world.
-  type Rarity = { name: string; color: string };
-  const DEFAULT_RARITIES: Rarity[] = [
-    { name: "Common", color: "#9ca3af" },
-    { name: "Uncommon", color: "#22c55e" },
-    { name: "Rare", color: "#3b82f6" },
-    { name: "Epic", color: "#a855f7" },
-    { name: "Legendary", color: "#f59e0b" },
-  ];
-  const [rarities, setRarities] = useState<Rarity[]>([]);
+  const [rarities, setRarities] = useState<WorldRarity[]>([]);
   const [newRarityName, setNewRarityName] = useState("");
   const [newRarityColor, setNewRarityColor] = useState("#9ca3af");
 
@@ -90,15 +87,26 @@ export default function AdminPanel() {
       setWorldData(world);
       setWorldName(world.name || "");
 
-      // Load the max stats. If the columns don't exist yet (database hasn't been updated), fall back to 30.
-      setMaxStats({
-        max_strength: world.max_strength ?? 30,
-        max_dexterity: world.max_dexterity ?? 30,
-        max_constitution: world.max_constitution ?? 30,
-        max_intelligence: world.max_intelligence ?? 30,
-        max_wisdom: world.max_wisdom ?? 30,
-        max_charisma: world.max_charisma ?? 30,
-      });
+      // Load attributes. If the column is empty/missing, fall back to defaults
+      if (Array.isArray(world.attributes) && world.attributes.length > 0) {
+        const cleaned: WorldAttribute[] = world.attributes
+          .filter((a: any) => a && typeof a.name === "string" && a.name.trim())
+          .map((a: any) => ({
+            id:
+              typeof a.id === "string" && a.id.trim()
+                ? a.id.trim()
+                : a.name.trim().toLowerCase().replace(/\s+/g, "_"),
+            name: a.name.trim(),
+            color: typeof a.color === "string" ? a.color : "#9ca3af",
+            max:
+              typeof a.max === "number" && a.max > 0
+                ? Math.min(999, Math.floor(a.max))
+                : 30,
+          }));
+        setAttributes(cleaned.length > 0 ? cleaned : DEFAULT_ATTRIBUTES);
+      } else {
+        setAttributes(DEFAULT_ATTRIBUTES);
+      }
 
       // Load classes. The string "Warrior,Mage,..." gets split into an array.
       const classList = world.classes
@@ -283,15 +291,15 @@ export default function AdminPanel() {
     }
     setSavingSettings(true);
     try {
-      // Save the world name, max stats and the classes list all in one update.
+      // Save the world name, classes, rarities and attributes in one update.
       // Classes are joined back to a comma separated string for storage.
       const { error } = await supabase
         .from("World")
         .update({
           name: worldName.trim(),
-          ...maxStats,
           classes: classes.join(","),
           rarities,
+          attributes,
         })
         .eq("id", worldId);
 
@@ -300,9 +308,9 @@ export default function AdminPanel() {
       setWorldData((prev: any) => ({
         ...prev,
         name: worldName.trim(),
-        ...maxStats,
         classes: classes.join(","),
         rarities,
+        attributes,
       }));
       alert("Settings saved!");
     } catch (err: any) {
@@ -312,10 +320,79 @@ export default function AdminPanel() {
     }
   }
 
-  // Update one of the max stat values. Min is 1, max is 100 to keep things reasonable.
-  function updateMaxStat(key: keyof typeof maxStats, value: number) {
-    const clamped = Math.max(1, Math.min(100, value));
-    setMaxStats((prev) => ({ ...prev, [key]: clamped }));
+  // Generate a stable random ID for a new attribute. We use this as the key
+  // in each character's attribute_values JSONB so renaming the display name
+  // never breaks existing data.
+  function generateAttributeId(): string {
+    return (
+      "attr_" +
+      Math.random().toString(36).slice(2, 10) +
+      Date.now().toString(36)
+    );
+  }
+
+  // Add a new attribute. Name must be unique (case insensitive).
+  function handleAddAttribute() {
+    const trimmed = newAttrName.trim();
+    if (!trimmed) return;
+    if (
+      attributes.some((a) => a.name.toLowerCase() === trimmed.toLowerCase())
+    ) {
+      alert("That attribute already exists.");
+      return;
+    }
+    setAttributes((prev) => [
+      ...prev,
+      {
+        id: generateAttributeId(),
+        name: trimmed,
+        color: newAttrColor,
+        max: Math.max(1, Math.min(999, newAttrMax || 30)),
+      },
+    ]);
+    setNewAttrName("");
+    setNewAttrColor("#9ca3af");
+    setNewAttrMax(30);
+  }
+
+  function handleRemoveAttribute(index: number) {
+    if (
+      !confirm(
+        "Remove this attribute? Existing characters will keep their saved value but it won't show until you re-add an attribute with the same ID.",
+      )
+    )
+      return;
+    setAttributes((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function handleRecolorAttribute(index: number, color: string) {
+    setAttributes((prev) =>
+      prev.map((a, i) => (i === index ? { ...a, color } : a)),
+    );
+  }
+
+  function handleRenameAttribute(index: number, name: string) {
+    setAttributes((prev) =>
+      prev.map((a, i) => (i === index ? { ...a, name } : a)),
+    );
+  }
+
+  function handleChangeAttributeMax(index: number, max: number) {
+    const clamped = Math.max(1, Math.min(999, max || 1));
+    setAttributes((prev) =>
+      prev.map((a, i) => (i === index ? { ...a, max: clamped } : a)),
+    );
+  }
+
+  // Move an attribute up or down in the list to control display order.
+  function handleMoveAttribute(index: number, direction: "up" | "down") {
+    setAttributes((prev) => {
+      const newIndex = direction === "up" ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[newIndex]] = [next[newIndex], next[index]];
+      return next;
+    });
   }
 
   // Add a new class to the list. Trims whitespace and skips duplicates.
@@ -339,9 +416,7 @@ export default function AdminPanel() {
   function handleAddRarity() {
     const trimmed = newRarityName.trim();
     if (!trimmed) return;
-    if (
-      rarities.some((r) => r.name.toLowerCase() === trimmed.toLowerCase())
-    ) {
+    if (rarities.some((r) => r.name.toLowerCase() === trimmed.toLowerCase())) {
       alert("That rarity already exists.");
       return;
     }
@@ -573,52 +648,166 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
-                {/* Max stats. Each input is 1-100. */}
+                {/* Custom attributes. Owner/admin can fully customize the
+                    list of stats characters use, names, colors, max values
+                    and order. */}
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-bold mb-1">Max Stat Values</h3>
+                    <h3 className="text-lg font-bold mb-1">
+                      Custom Attributes
+                    </h3>
                     <p className="text-sm text-white/50">
-                      Set the highest value each stat can reach in this world.
+                      Define the attributes characters in this world will
+                      have.).
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {[
-                      { key: "max_strength", label: "Strength", color: "text-red-400" },
-                      { key: "max_dexterity", label: "Dexterity", color: "text-green-400" },
-                      { key: "max_constitution", label: "Constitution", color: "text-yellow-400" },
-                      { key: "max_intelligence", label: "Intelligence", color: "text-purple-400" },
-                      { key: "max_wisdom", label: "Wisdom", color: "text-blue-400" },
-                      { key: "max_charisma", label: "Charisma", color: "text-pink-400" },
-                    ].map((stat) => (
-                      <div key={stat.key} className="space-y-2">
-                        <label className={`text-xs font-bold uppercase tracking-wider ${stat.color}`}>
-                          {stat.label}
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          max={100}
-                          value={maxStats[stat.key as keyof typeof maxStats]}
-                          onChange={(e) =>
-                            updateMaxStat(
-                              stat.key as keyof typeof maxStats,
-                              parseInt(e.target.value) || 1,
-                            )
-                          }
-                          className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg p-2 focus:border-orange-500 outline-none text-white"
-                        />
-                      </div>
-                    ))}
+                  {/* List of existing attributes. Each row allows to edit name,
+                      color, max value, reorder up/down, and delete. */}
+                  <div className="space-y-2">
+                    {attributes.length === 0 ? (
+                      <p className="text-white/40 italic text-sm">
+                        No attributes yet. Add one below.
+                      </p>
+                    ) : (
+                      attributes.map((attr, index) => (
+                        <div
+                          key={attr.id}
+                          className="flex items-center gap-2 bg-[#1a1a1a] border border-white/10 rounded-lg p-2"
+                          style={{ borderColor: attr.color + "40" }}
+                        >
+                          {/* Reorder buttons */}
+                          <div className="flex flex-col">
+                            <button
+                              onClick={() => handleMoveAttribute(index, "up")}
+                              disabled={index === 0}
+                              className="text-white/40 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed"
+                              title="Move up"
+                            >
+                              <ChevronUp className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleMoveAttribute(index, "down")}
+                              disabled={index === attributes.length - 1}
+                              className="text-white/40 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed"
+                              title="Move down"
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          {/* Color swatch / picker */}
+                          <input
+                            type="color"
+                            value={attr.color}
+                            onChange={(e) =>
+                              handleRecolorAttribute(index, e.target.value)
+                            }
+                            className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0 shrink-0"
+                            title="Change color"
+                          />
+
+                          {/* Name input */}
+                          <input
+                            type="text"
+                            value={attr.name}
+                            onChange={(e) =>
+                              handleRenameAttribute(index, e.target.value)
+                            }
+                            placeholder="Attribute name..."
+                            className="flex-1 bg-[#0d0d0d] border border-white/10 rounded p-2 text-sm font-bold outline-none focus:border-orange-500"
+                            style={{ color: attr.color }}
+                          />
+
+                          {/* Max value */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-[10px] uppercase tracking-wider text-white/40">
+                              Max
+                            </span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={999}
+                              value={attr.max}
+                              onChange={(e) =>
+                                handleChangeAttributeMax(
+                                  index,
+                                  parseInt(e.target.value) || 1,
+                                )
+                              }
+                              className="w-16 bg-[#0d0d0d] border border-white/10 rounded p-2 text-sm text-white text-center outline-none focus:border-orange-500"
+                            />
+                          </div>
+
+                          {/* Delete button */}
+                          <button
+                            onClick={() => handleRemoveAttribute(index)}
+                            className="p-2 text-red-400/70 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0"
+                            title="Remove attribute"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Add new attribute row */}
+                  <div className="flex items-center gap-2 max-w-full pt-2 border-t border-white/5">
+                    <input
+                      type="color"
+                      value={newAttrColor}
+                      onChange={(e) => setNewAttrColor(e.target.value)}
+                      className="w-12 h-10 rounded cursor-pointer bg-transparent border border-white/10 p-0 shrink-0"
+                      title="Pick attribute color"
+                    />
+                    <input
+                      type="text"
+                      value={newAttrName}
+                      onChange={(e) => setNewAttrName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddAttribute();
+                        }
+                      }}
+                      placeholder="New attribute name (e.g. Magic, Luck)..."
+                      className="flex-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-2.5 focus:border-orange-500 outline-none text-white"
+                    />
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] uppercase tracking-wider text-white/40">
+                        Max
+                      </span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={999}
+                        value={newAttrMax}
+                        onChange={(e) =>
+                          setNewAttrMax(parseInt(e.target.value) || 1)
+                        }
+                        className="w-16 bg-[#1a1a1a] border border-white/10 rounded-lg p-2.5 text-white text-center outline-none focus:border-orange-500"
+                      />
+                    </div>
+                    <button
+                      onClick={handleAddAttribute}
+                      disabled={!newAttrName.trim()}
+                      className="px-4 py-2.5 bg-orange-600/20 hover:bg-orange-600/30 disabled:opacity-30 disabled:cursor-not-allowed border border-orange-500/40 rounded-lg text-sm font-bold text-orange-200 transition-colors shrink-0"
+                    >
+                      Add
+                    </button>
                   </div>
                 </div>
 
                 {/* Classes list. Owner/admin can add and remove. */}
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-bold mb-1">Available Classes</h3>
+                    <h3 className="text-lg font-bold mb-1">
+                      Available Classes
+                    </h3>
                     <p className="text-sm text-white/50">
-                      The list of character classes that can be picked when creating a character.
+                      The list of character classes that can be picked when
+                      creating a character.
                     </p>
                   </div>
 
@@ -675,10 +864,12 @@ export default function AdminPanel() {
                 {/* Rarities list. Owner/admin can add, recolor and remove. */}
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-bold mb-1">Available Rarities</h3>
+                    <h3 className="text-lg font-bold mb-1">
+                      Available Rarities
+                    </h3>
                     <p className="text-sm text-white/50">
-                      Define the rarity tiers and their colors. These will be the
-                      options available when creating or editing characters.
+                      Define the rarity tiers and their colors. These will be
+                      the options available when creating or editing characters.
                     </p>
                   </div>
 
