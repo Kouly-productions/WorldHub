@@ -1,145 +1,98 @@
 # WorldHub
 
-WorldHub er en hjemmeside til rollespillere. Her kan man oprette spilverdener, lave karakterer (NPC'er og spillere) og dele dem med sine venner.
+WorldHub er en hjemmeside til rollespillere. Her kan man samle sine spilverdener, NPC'er og spillerkarakterer ét sted. Det er mit svendeprøveprojekt.
 
-Den her guide viser dig, hvordan du henter projektet og kører det på din egen computer
+Hvis du vil køre projektet på din egen computer, så følg guiden nedenfor.
 
-> **INFO**: Du behøver ikke selv at sætte en database op. Forbindelsen til min Supabase database er allerede klar i guiden nedenfor. Du skal bare hente projektet, installere det, og starte det.
+## Til lærer og censor
 
----
+Min database er allerede sat op. I behøver ikke selv at oprette en. I skal bare hente koden, lægge mine nøgler ind og starte serveren. Det tager omkring 10 minutter.
 
-## Hvad får du brug for?
+## Programmer du skal bruge
 
-Før du starter, skal du installere to programmer på din computer. Det er gratis, og det tager cirka 5 minutter.
+1. Node.js. Hent LTS versionen fra nodejs.org. Klik dig igennem installationen.
+2. Git. Hent fra git-scm.com. Brug standardindstillingerne.
 
-### 1. Node.js (selve "motoren" der kører hjemmesiden)
-- Gå til https://nodejs.org
-- Klik på den store grønne knap der hedder "LTS"
-- Når filen er hentet, åbn den og klik "Næste" hele vejen igennem
-- Når installationen er færdig, er du klar
+Du kan også installere VS Code fra code.visualstudio.com hvis du vil kigge på koden, men det er ikke nødvendigt.
 
-### 2. Git (programmet der henter koden fra GitHub)
-- Gå til https://git-scm.com/downloads
-- Klik på "Download for Windows" (eller Mac/Linux)
-- Når filen er hentet, åbn den og klik "Næste" hele vejen igennem
-- Du kan bare bruge alle standard-indstillingerne
+## Hent koden
 
-### Valgfrit: En kode-editor
-Hvis du gerne vil kunne se koden, kan du installere Visual Studio Code:
-- Gå til https://code.visualstudio.com/
-- Klik "Download for Windows"
-- Installer programmet
+1. Åbn en terminal. På Windows hedder den PowerShell, på Mac hedder den Terminal.
+2. Skriv denne kommando og tryk Enter:
 
----
-
-## Trin 1: Hent projektet til din computer
-
-1. Åbn et terminal vindue:
-   - **Windows**: Tryk på Windows knappen, skriv "PowerShell" og tryk Enter
-   - **Mac**: Tryk på Cmd + mellemrum, skriv "Terminal" og tryk Enter
-2. Skriv (eller kopier) denne kommando ind og tryk Enter:
-
-```bash
+```
 git clone https://github.com/Kouly-productions/WorldHub.git
 ```
 
-3. Vent et øjeblik mens projektet hentes
-4. Skriv så denne kommando for at gå ind i projekt mappen:
+3. Gå ind i mappen:
 
-```bash
+```
 cd WorldHub
 ```
 
----
+## Installer pakkerne
 
-## Trin 2: Installer projektets pakker
+1. Skriv denne kommando i terminalen og tryk Enter:
 
-WorldHub bruger en masse små pakker som skal installeres. Det gør du sådan her:
-
-1. I samme terminal, skriv:
-
-```bash
+```
 npm install
 ```
 
-2. Tryk Enter
-3. Og så venter vi bare lidt :))
-4. Når det er færdigt, kommer du tilbage til en almindelig kommando linje
+2. Og så venter vi bare i lidt tid til den er færdig :))
 
----
+## Opret en .env.local fil
 
-## Trin 3: Sæt forbindelsen til databasen op
+Det er her nøglerne til min database skal ligge.
 
-Hjemmesiden gemmer alle data (brugere, verdener, karakterer) i databasen Supabase. Du skal fortælle hjemmesiden hvor databasen ligger.
-
-1. I `WorldHub` mappen skal du oprette en fil der hedder `.env.local`
-
-   **Sådan gør du det i terminalen:**
-   - **Windows (PowerShell)**: Skriv `New-Item .env.local` og tryk Enter
-   - **Mac/Linux**: Skriv `touch .env.local` og tryk Enter
-
-2. Åbn filen i Notepad, VS Code, eller hvad du nu har:
-   - **Windows**: Skriv `notepad .env.local` i terminalen
-   - **Mac**: Skriv `open -e .env.local` i terminalen
-
-3. Kopier følgende ind i filen:
+1. Lav en ny fil i WorldHub mappen der hedder .env.local.
+2. Åbn filen i Notepad eller en anden editor.
+3. Kopier disse to linjer ind:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://cedtyjxnykuvcclcammj.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlZHR5anhueWt1dmNjbGNhbW1qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0OTA4NDAsImV4cCI6MjA4NzA2Njg0MH0.SWMyzS8uPDpnlEPrxeYFGKmnbyqNbC_qOXs1Yhjv09M
 ```
 
-4. Gem filen og luk den (Ctrl + S, så Ctrl + W)
+4. Gem filen.
 
----
+## Start serveren
 
-## Trin 4: Start hjemmesiden
+1. Skriv denne kommando i terminalen:
 
-Nu er alt klar. Tid til at starte hjemmesiden!
-
-1. Tilbage i terminalen, skriv:
-
-```bash
+```
 npm run dev
 ```
 
-2. Tryk Enter
-3. Vent et øjeblik. Du vil se noget der siger:
+2. Vent til du ser teksten Ready og http://localhost:3000.
+3. Åbn http://localhost:3000 i din browser.
 
-```
-✓ Ready in 2s
-- Local:   http://localhost:3000
-```
+## Test at det virker
 
-4. Åbn din browser og gå til **http://localhost:3000**
-5. Du burde nu se WorldHub's login side
+1. Klik på Create Account.
+2. Opret en bruger med email og password.
+3. Log ind.
+4. Opret en verden.
+5. Opret en NPC.
 
----
+## Stop serveren
 
-## Trin 5: Test at det virker
+Tryk Ctrl og C i terminalen samtidig. For at starte den igen skal du bare køre npm run dev.
 
-1. Klik på **"Create Account"** for at oprette en bruger
-2. Skriv en e-mail, brugernavn og password
-3. Log ind
-4. Opret en verden
-5. Opret en NPC
+## Hvis noget går galt
 
-Og alt burde at vrike YIPEEEEEEEE!!! :D
+1. Hvis npm eller git ikke virker, så har du ikke installeret programmerne rigtigt. Genstart computeren og prøv igen.
+2. Hvis du ikke kan logge ind, så er der nok en stavefejl i .env.local. Tjek at de to linjer er præcis som ovenfor.
+3. Hvis du får en fejl der siger Cannot find module, så prøv at køre npm install igen.
+4. Hvis port 3000 er optaget, så bruger Next.js bare port 3001 i stedet.
 
----
+## Hvad jeg har brugt
 
-## Teknologier brugt i projektet
-
-- **Next.js 16** – Framework til hjemmesiden
-- **React 19** – Bibliotek til at bygge brugergrænsefladen
-- **TypeScript** – Programmeringssprog
-- **Tailwind CSS 4** – Styling
-- **Supabase** – Database og log n-system
-- **Lucide React** – Ikoner
-
----
+1. Next.js 16 og React 19 til selve siden.
+2. TypeScript som programmeringssprog.
+3. Tailwind CSS til design.
+4. Supabase til database og login.
+5. Lucide React til ikoner.
 
 ## Live version
 
-WorldHub kører også online på Vercel. Du kan finde den live version her:
-https://worldhub-nine.vercel.app/worldChoice
+Hjemmesiden kører også online på Vercel: [indsæt URL]
