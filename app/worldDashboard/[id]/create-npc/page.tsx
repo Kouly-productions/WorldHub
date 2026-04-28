@@ -86,6 +86,17 @@ export default function CreateNPCPage() {
     "Monk",
   ]);
 
+  // List of rarities the user can pick from. Loaded from World.rarities (JSONB).
+  // Each rarity has a name and a hex color used for visual styling.
+  type Rarity = { name: string; color: string };
+  const [availableRarities, setAvailableRarities] = useState<Rarity[]>([
+    { name: "Common", color: "#9ca3af" },
+    { name: "Uncommon", color: "#22c55e" },
+    { name: "Rare", color: "#3b82f6" },
+    { name: "Epic", color: "#a855f7" },
+    { name: "Legendary", color: "#f59e0b" },
+  ]);
+
   // Load the world's settings (max stats and class list) when the page opens.
   useEffect(() => {
     async function loadWorldSettings() {
@@ -94,7 +105,7 @@ export default function CreateNPCPage() {
       const { data: world } = await supabase
         .from("World")
         .select(
-          "max_strength, max_dexterity, max_constitution, max_intelligence, max_wisdom, max_charisma, classes",
+          "max_strength, max_dexterity, max_constitution, max_intelligence, max_wisdom, max_charisma, classes, rarities",
         )
         .eq("id", worldId)
         .single();
@@ -123,6 +134,28 @@ export default function CreateNPCPage() {
               list.includes(prev.class)
                 ? prev
                 : { ...prev, class: list[0] },
+            );
+          }
+        }
+
+        // Load rarities from the world. Same idea as classes - if the current
+        // selection isn't in the list, snap to the first one.
+        if (Array.isArray(world.rarities) && world.rarities.length > 0) {
+          const cleaned = world.rarities
+            .filter(
+              (r: any) => r && typeof r.name === "string" && r.name.trim(),
+            )
+            .map((r: any) => ({
+              name: r.name.trim(),
+              color: typeof r.color === "string" ? r.color : "#9ca3af",
+            }));
+
+          if (cleaned.length > 0) {
+            setAvailableRarities(cleaned);
+            setFormData((prev) =>
+              cleaned.some((r: Rarity) => r.name === prev.rarity)
+                ? prev
+                : { ...prev, rarity: cleaned[0].name },
             );
           }
         }
@@ -418,11 +451,11 @@ export default function CreateNPCPage() {
                 }
                 className={selectClass}
               >
-                <option value="Common">Common (Gray)</option>
-                <option value="Uncommon">Uncommon (Green)</option>
-                <option value="Rare">Rare (Blue)</option>
-                <option value="Epic">Epic (Purple)</option>
-                <option value="Legendary">Legendary (Orange)</option>
+                {availableRarities.map((rarity) => (
+                  <option key={rarity.name} value={rarity.name}>
+                    {rarity.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-1">

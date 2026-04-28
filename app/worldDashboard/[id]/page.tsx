@@ -454,9 +454,32 @@ export default function WorldDashboard() {
     },
   };
 
+  // Build a style object for a character's rarity based on the world's
+  // configured rarities (admin-defined). Falls back to a neutral gray if
+  // the rarity name isn't in the world's list (e.g. legacy character).
+  function getCharRarityStyle(rarityName: string) {
+    const worldRarities: Array<{ name: string; color: string }> = Array.isArray(
+      worldData?.rarities,
+    )
+      ? worldData.rarities
+      : [];
+    const found = worldRarities.find((r) => r.name === rarityName);
+    const hex = found?.color || "#6b7280";
+    return {
+      hex,
+      borderStyle: { borderColor: hex } as React.CSSProperties,
+      accentStyle: { color: hex } as React.CSSProperties,
+      badgeStyle: {
+        backgroundColor: hex,
+        color: "#fff",
+      } as React.CSSProperties,
+      glowStyle: { boxShadow: `0 0 20px ${hex}40` } as React.CSSProperties,
+    };
+  }
+
   function renderCard(char: any, isNpc: boolean) {
     const rarity = char.rarity || "Common";
-    const rc = rarityConfig[rarity] || rarityConfig.Common;
+    const rs = getCharRarityStyle(rarity);
 
     // When the card is clicked (not the buttons), go to the character page.
     // Buttons inside the card already use stopPropagation so this won't fire when they're clicked.
@@ -468,17 +491,17 @@ export default function WorldDashboard() {
       <div
         key={char.id}
         onClick={handleCardClick}
-        className={`relative flex flex-col rounded-sm ${rc.border} border-2 bg-[#1a1510] overflow-hidden group transition-all duration-300 hover:-translate-y-1 cursor-pointer ${rc.glow}`}
+        className="relative flex flex-col rounded-sm border-2 bg-[#1a1510] overflow-hidden group transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+        style={{ ...rs.borderStyle, ...rs.glowStyle }}
       >
-        {/* Legendary shimmer */}
-        {rarity === "Legendary" && (
-          <div className="absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-amber-300/10 to-transparent group-hover:animate-[shimmer_2s_infinite] z-50 pointer-events-none" />
-        )}
-
         {/* Top banner: class + level */}
-        <div className="relative bg-[#111] border-b-2 ${rc.border} py-3 text-center">
+        <div
+          className="relative bg-[#111] border-b-2 py-3 text-center"
+          style={rs.borderStyle}
+        >
           <p
-            className={`text-xs font-bold uppercase tracking-[0.25em] ${rc.accent}`}
+            className="text-xs font-bold uppercase tracking-[0.25em]"
+            style={rs.accentStyle}
           >
             {char.class || "Warrior"}
           </p>
@@ -487,16 +510,20 @@ export default function WorldDashboard() {
           </p>
           {/* Decorative corner accents */}
           <div
-            className={`absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 ${rc.border}`}
+            className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2"
+            style={rs.borderStyle}
           />
           <div
-            className={`absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 ${rc.border}`}
+            className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2"
+            style={rs.borderStyle}
           />
           <div
-            className={`absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 ${rc.border}`}
+            className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2"
+            style={rs.borderStyle}
           />
           <div
-            className={`absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 ${rc.border}`}
+            className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2"
+            style={rs.borderStyle}
           />
         </div>
 
@@ -517,7 +544,8 @@ export default function WorldDashboard() {
 
           {/* Rarity badge floating on portrait */}
           <div
-            className={`absolute top-2 right-2 px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-widest ${rc.badgeBg} ${rc.text}`}
+            className="absolute top-2 right-2 px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-widest"
+            style={rs.badgeStyle}
           >
             {rarity}
           </div>
@@ -562,31 +590,27 @@ export default function WorldDashboard() {
 
         {/* Divider */}
         <div className="mx-5 my-2 flex items-center gap-2">
-          <div
-            className={`flex-1 h-px bg-linear-to-r from-transparent via-white/20 to-transparent`}
-          />
-          <div className={`w-1.5 h-1.5 rotate-45 border ${rc.border}`} />
-          <div
-            className={`flex-1 h-px bg-linear-to-r from-transparent via-white/20 to-transparent`}
-          />
+          <div className="flex-1 h-px bg-linear-to-r from-transparent via-white/20 to-transparent" />
+          <div className="w-1.5 h-1.5 rotate-45 border" style={rs.borderStyle} />
+          <div className="flex-1 h-px bg-linear-to-r from-transparent via-white/20 to-transparent" />
         </div>
 
         {/* Info grid - 2 columns like the reference */}
         <div className="px-5 py-2 grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
           <div className="flex items-center gap-2">
-            <span className={`text-xs ${rc.accent}`}>&#9672;</span>
+            <span className="text-xs" style={rs.accentStyle}>&#9672;</span>
             <span className="text-white/70">{char.gender || "Unknown"}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-xs ${rc.accent}`}>&#9672;</span>
+            <span className="text-xs" style={rs.accentStyle}>&#9672;</span>
             <span className="text-white/70">{char.class || "Warrior"}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-xs ${rc.accent}`}>&#9672;</span>
+            <span className="text-xs" style={rs.accentStyle}>&#9672;</span>
             <span className="text-white/70">Age {char.age || "?"}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-xs ${rc.accent}`}>&#9672;</span>
+            <span className="text-xs" style={rs.accentStyle}>&#9672;</span>
             <span className="text-white/70">
               {char.relationship_status || "Single"}
             </span>
@@ -596,7 +620,7 @@ export default function WorldDashboard() {
         {/* Divider */}
         <div className="mx-5 my-2 flex items-center gap-2">
           <div className="flex-1 h-px bg-linear-to-r from-transparent via-white/20 to-transparent" />
-          <div className={`w-1.5 h-1.5 rotate-45 border ${rc.border}`} />
+          <div className="w-1.5 h-1.5 rotate-45 border" style={rs.borderStyle} />
           <div className="flex-1 h-px bg-linear-to-r from-transparent via-white/20 to-transparent" />
         </div>
 

@@ -42,6 +42,20 @@ export default function AdminPanel() {
   const [classes, setClasses] = useState<string[]>([]);
   const [newClass, setNewClass] = useState("");
 
+  // Rarities are stored as a JSONB array of { name, color } in the World table.
+  // The color is a hex string used to style character cards in this world.
+  type Rarity = { name: string; color: string };
+  const DEFAULT_RARITIES: Rarity[] = [
+    { name: "Common", color: "#9ca3af" },
+    { name: "Uncommon", color: "#22c55e" },
+    { name: "Rare", color: "#3b82f6" },
+    { name: "Epic", color: "#a855f7" },
+    { name: "Legendary", color: "#f59e0b" },
+  ];
+  const [rarities, setRarities] = useState<Rarity[]>([]);
+  const [newRarityName, setNewRarityName] = useState("");
+  const [newRarityColor, setNewRarityColor] = useState("#9ca3af");
+
   // Invite modal state
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -94,6 +108,22 @@ export default function AdminPanel() {
             .filter((c: string) => c.length > 0)
         : [];
       setClasses(classList);
+
+      // Load rarities. If the column is empty/missing, fall back to defaults.
+      if (Array.isArray(world.rarities) && world.rarities.length > 0) {
+        setRarities(
+          world.rarities
+            .filter(
+              (r: any) => r && typeof r.name === "string" && r.name.trim(),
+            )
+            .map((r: any) => ({
+              name: r.name.trim(),
+              color: typeof r.color === "string" ? r.color : "#9ca3af",
+            })),
+        );
+      } else {
+        setRarities(DEFAULT_RARITIES);
+      }
 
       // Need to figure out what role the current user has
       let role = "member";
@@ -261,6 +291,7 @@ export default function AdminPanel() {
           name: worldName.trim(),
           ...maxStats,
           classes: classes.join(","),
+          rarities,
         })
         .eq("id", worldId);
 
@@ -271,6 +302,7 @@ export default function AdminPanel() {
         name: worldName.trim(),
         ...maxStats,
         classes: classes.join(","),
+        rarities,
       }));
       alert("Settings saved!");
     } catch (err: any) {
@@ -301,6 +333,32 @@ export default function AdminPanel() {
   // Remove a class from the list by index.
   function handleRemoveClass(index: number) {
     setClasses((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  // Add a new rarity. Name must be unique (case-insensitive). Color is a hex string.
+  function handleAddRarity() {
+    const trimmed = newRarityName.trim();
+    if (!trimmed) return;
+    if (
+      rarities.some((r) => r.name.toLowerCase() === trimmed.toLowerCase())
+    ) {
+      alert("That rarity already exists.");
+      return;
+    }
+    setRarities((prev) => [...prev, { name: trimmed, color: newRarityColor }]);
+    setNewRarityName("");
+    setNewRarityColor("#9ca3af");
+  }
+
+  function handleRemoveRarity(index: number) {
+    setRarities((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  // Recolor an existing rarity in place (no DB save until "Save Settings").
+  function handleRecolorRarity(index: number, color: string) {
+    setRarities((prev) =>
+      prev.map((r, i) => (i === index ? { ...r, color } : r)),
+    );
   }
 
   const [deleting, setDeleting] = useState(false);
@@ -605,6 +663,88 @@ export default function AdminPanel() {
                             onClick={() => handleRemoveClass(index)}
                             className="text-white/40 hover:text-red-400 transition-colors"
                             title="Remove class"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Rarities list. Owner/admin can add, recolor and remove. */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-bold mb-1">Available Rarities</h3>
+                    <p className="text-sm text-white/50">
+                      Define the rarity tiers and their colors. These will be the
+                      options available when creating or editing characters.
+                    </p>
+                  </div>
+
+                  {/* Add new rarity */}
+                  <div className="flex gap-2 max-w-md items-stretch">
+                    <input
+                      type="text"
+                      value={newRarityName}
+                      onChange={(e) => setNewRarityName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddRarity();
+                        }
+                      }}
+                      placeholder="Rarity name..."
+                      className="flex-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-2.5 focus:border-orange-500 outline-none text-white"
+                    />
+                    <input
+                      type="color"
+                      value={newRarityColor}
+                      onChange={(e) => setNewRarityColor(e.target.value)}
+                      className="w-12 bg-[#1a1a1a] border border-white/10 rounded-lg cursor-pointer"
+                      title="Pick rarity color"
+                    />
+                    <button
+                      onClick={handleAddRarity}
+                      disabled={!newRarityName.trim()}
+                      className="px-4 py-2 bg-orange-600/20 hover:bg-orange-600/30 disabled:opacity-30 disabled:cursor-not-allowed border border-orange-500/40 rounded-lg text-sm font-bold text-orange-200 transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {/* Existing rarities */}
+                  <div className="flex flex-wrap gap-2">
+                    {rarities.length === 0 ? (
+                      <p className="text-white/40 italic text-sm">
+                        No rarities yet. Add one above.
+                      </p>
+                    ) : (
+                      rarities.map((rarity, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-1.5 group"
+                          style={{ borderColor: rarity.color + "55" }}
+                        >
+                          <input
+                            type="color"
+                            value={rarity.color}
+                            onChange={(e) =>
+                              handleRecolorRarity(index, e.target.value)
+                            }
+                            className="w-5 h-5 rounded cursor-pointer bg-transparent border-0 p-0"
+                            title="Change color"
+                          />
+                          <span
+                            className="text-sm font-bold"
+                            style={{ color: rarity.color }}
+                          >
+                            {rarity.name}
+                          </span>
+                          <button
+                            onClick={() => handleRemoveRarity(index)}
+                            className="text-white/40 hover:text-red-400 transition-colors"
+                            title="Remove rarity"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
