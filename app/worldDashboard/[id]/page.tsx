@@ -426,10 +426,18 @@ export default function WorldDashboard() {
   function renderCard(char: any, isNpc: boolean) {
     const rarity = char.rarity || "Common";
     const rc = rarityConfig[rarity] || rarityConfig.Common;
+
+    // When the card is clicked (not the buttons), go to the character page.
+    // Buttons inside the card already use stopPropagation so this won't fire when they're clicked.
+    function handleCardClick() {
+      router.push(`/worldDashboard/${worldId}/character/${char.id}`);
+    }
+
     return (
       <div
         key={char.id}
-        className={`relative flex flex-col rounded-sm ${rc.border} border-2 bg-[#1a1510] overflow-hidden group transition-all duration-300 hover:-translate-y-1 ${rc.glow}`}
+        onClick={handleCardClick}
+        className={`relative flex flex-col rounded-sm ${rc.border} border-2 bg-[#1a1510] overflow-hidden group transition-all duration-300 hover:-translate-y-1 cursor-pointer ${rc.glow}`}
       >
         {/* Legendary shimmer */}
         {rarity === "Legendary" && (
@@ -589,7 +597,7 @@ export default function WorldDashboard() {
                 {stat.label}
               </p>
               <p className="text-sm font-black text-white">
-                {stat.value ?? "—"}
+                {stat.value ?? "-"}
               </p>
             </div>
           ))}
@@ -1140,7 +1148,7 @@ export default function WorldDashboard() {
                   <Backpack className="w-3.5 h-3.5" /> World Catalog
                 </p>
                 <h2 className="text-xl font-bold bg-linear-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent">
-                  {worldData?.name} — Items
+                  {worldData?.name} Items
                 </h2>
               </div>
               <button

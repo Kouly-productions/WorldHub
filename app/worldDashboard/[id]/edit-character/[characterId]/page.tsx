@@ -407,7 +407,9 @@ export default function EditCharacterPage() {
                 className={inputClass}
                 placeholder="Max HP"
               />
-              <span className="text-amber-400/60 text-xs font-bold tracking-wider">HP</span>
+              <span className="text-amber-400/60 text-xs font-bold tracking-wider">
+                HP
+              </span>
             </div>
           </div>
 
@@ -524,6 +526,7 @@ export default function EditCharacterPage() {
                 placeholder="Enter URL..."
               />
             </div>
+
           </div>
 
           {/* Submit */}
