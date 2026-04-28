@@ -34,7 +34,7 @@ Hvis du gerne vil kunne se koden, kan du installere Visual Studio Code:
 
 ## Trin 1: Hent projektet til din computer
 
-1. Åbn et terminal-vindue:
+1. Åbn et terminal vindue:
    - **Windows**: Tryk på Windows knappen, skriv "PowerShell" og tryk Enter
    - **Mac**: Tryk på Cmd + mellemrum, skriv "Terminal" og tryk Enter
 2. Skriv (eller kopier) denne kommando ind og tryk Enter:
@@ -72,7 +72,7 @@ npm install
 
 Hjemmesiden gemmer alle data (brugere, verdener, karakterer) i databasen Supabase. Du skal fortælle hjemmesiden hvor databasen ligger.
 
-1. I `WorldHub`-mappen skal du oprette en fil der hedder `.env.local`
+1. I `WorldHub` mappen skal du oprette en fil der hedder `.env.local`
 
    **Sådan gør du det i terminalen:**
    - **Windows (PowerShell)**: Skriv `New-Item .env.local` og tryk Enter
@@ -112,7 +112,7 @@ npm run dev
 ```
 
 4. Åbn din browser og gå til **http://localhost:3000**
-5. Du burde nu se WorldHub's login-side
+5. Du burde nu se WorldHub's login side
 
 ---
 
@@ -134,7 +134,7 @@ Og alt burde at vrike YIPEEEEEEEE!!! :D
 - **React 19** – Bibliotek til at bygge brugergrænsefladen
 - **TypeScript** – Programmeringssprog
 - **Tailwind CSS 4** – Styling
-- **Supabase** – Database og login-system
+- **Supabase** – Database og log n-system
 - **Lucide React** – Ikoner
 
 ---
