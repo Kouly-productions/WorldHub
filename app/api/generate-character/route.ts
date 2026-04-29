@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_ATTRIBUTES } from "@/lib/worldDefaults";
 
-// The shape we expect from clients when they pass in custom world attributes.
-// Each attribute has a stable id (used as the JSON key in the response), a
-// human readable name (shown to the AI so it can match concepts), and a max
-// value the AI must not exceed.
+//  the app what an "attribute" (like Strength or Speed) looks like.
 type AttributeSpec = { id: string; name: string; max: number };
 
-// We strip color from the shared defaults since the AI doesn't care about it.
+// We take the default attributes but remove the color, because the AI doesn't need to know the colors to make a character.
 const DEFAULT_ATTRIBUTE_SPECS: AttributeSpec[] = DEFAULT_ATTRIBUTES.map((a) => ({
   id: a.id,
   name: a.name,
   max: a.max,
 }));
 
+// Run when our app asks the AI to create a character
 export async function POST(req: NextRequest) {
+  // First, get our secret key to talk to OpenAI
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -24,6 +23,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // Read what the user typed in the prompt box
     const { prompt, attributes } = await req.json();
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Sanitize the attributes coming from the client. If nothing was passed
-    // (or it was malformed) fall back to the default 6 D&D-style stats.
+    // Clean up the attributes (stats) got from the world settings.
+    // If there are none, just use the default ones (Strength, Agility, etc.)
     const attrSpecs: AttributeSpec[] = (() => {
       if (!Array.isArray(attributes) || attributes.length === 0) {
         return DEFAULT_ATTRIBUTE_SPECS;
@@ -54,9 +54,7 @@ export async function POST(req: NextRequest) {
       return cleaned.length > 0 ? cleaned : DEFAULT_ATTRIBUTE_SPECS;
     })();
 
-    // Build a JSON snippet describing each attribute the AI must populate.
-    // We include the max value so the AI knows what range to use, some
-    // worlds might cap stats at 10, or go up to 100.
+    // Make a list of all the stats the AI needs to come up with numbers for
     const attributeFields = attrSpecs
       .map(
         (a) =>
@@ -64,6 +62,7 @@ export async function POST(req: NextRequest) {
       )
       .join(",\n");
 
+    // Now send the request to the OpenAI AI
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -95,10 +94,10 @@ Return ONLY the JSON object, no markdown, no extra text. The attribute_values ob
           },
           {
             role: "user",
-            content: prompt,
+            content: prompt, // What the user typed
           },
         ],
-        temperature: 0.9,
+        temperature: 0.9, // This makes the AI a bit more creative/random
         max_tokens: 600,
       }),
     });
@@ -111,6 +110,7 @@ Return ONLY the JSON object, no markdown, no extra text. The attribute_values ob
       );
     }
 
+    // Read the answer from the AI
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content?.trim();
 
@@ -118,6 +118,7 @@ Return ONLY the JSON object, no markdown, no extra text. The attribute_values ob
       return NextResponse.json({ error: "No response from AI" }, { status: 500 });
     }
 
+    // Turn the text the AI sent back into an object
     const character = JSON.parse(content);
     return NextResponse.json(character);
   } catch (err: any) {

@@ -14,49 +14,68 @@ import { ROLES } from "@/lib/roles";
 import LoadingScreen from "@/components/LoadingScreen";
 
 export default function worldChoice() {
+  // router makes it easier to move to different pages
   const router = useRouter();
+
+  // These variables hold the paths to the planet images we show on screen
   const createPlanetImg = "/create_planet.png";
   const joinPlanetImg = "/join_planet.png";
   const existingWorldPlanetImg = "/existing_world_planet.png";
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [newWorldName, setNewWorldName] = useState("");
-  const [userWorlds, setUserWorlds] = useState<any[]>([]);
-  const [showWorldsModal, setShowWorldsModal] = useState(false);
-  const [ready, setReady] = useState(false);
+
+  // States that remember information while the user is on the page
+  const [loggedIn, setLoggedIn] = useState(false); // Is the user logged in?
+  const [showModal, setShowModal] = useState(false); // Should we show the "Create World" popup?
+  const [newWorldName, setNewWorldName] = useState(""); // The name of the new world they type
+  const [userWorlds, setUserWorlds] = useState<any[]>([]); // A list of the user's worlds
+  const [showWorldsModal, setShowWorldsModal] = useState(false); // Should we show the list of worlds popup?
+  const [ready, setReady] = useState(false); // Is the page done loading data?
   const [pulses, setPulses] = useState<
     { id: number; x: number; y: number; horizontal: boolean }[]
-  >([]);
+  >([]); // Just for the cool glowing lights moving in the background... TOOK FOREVER TO MAKE....
 
+  // Make the cool glowing lights run across the background grid
   useEffect(() => {
     let id = 0;
     const interval = setInterval(() => {
+      // Pick a random spot for the light to start
       const gx = Math.floor(Math.random() * (window.innerWidth / 60)) * 60;
       const gy = Math.floor(Math.random() * (window.innerHeight / 60)) * 60;
+
+      // Decide if the light goes left/right or up/down
       const horizontal = Math.random() > 0.5;
       const pulse = { id: id++, x: gx, y: gy, horizontal };
+
+      // Add the light to our list so it shows on screen
       setPulses((prev) => [...prev, pulse]);
+
+      // Remove the light after 2 seconds so it doesn't stay forever
       setTimeout(
         () => setPulses((prev) => prev.filter((p) => p.id !== pulse.id)),
         2000,
       );
-    }, 600);
+    }, 600); // Create a new light every 600 milliseconds
+
+    // Stop making lights if the user leaves the page
     return () => clearInterval(interval);
   }, []);
 
+  // Run when the page loads to check who the user is and what worlds they have
   useEffect(() => {
     async function checkUserAndWorld() {
+      // Ask Supabase if someone is logged in
       const {
         data: { user },
       } = await supabase.auth.getUser();
       setLoggedIn(!!user);
 
       if (user) {
+        // If they are logged in, get all the worlds they created themselves
         const { data: ownedWorlds } = await supabase
           .from("World")
           .select("*")
           .eq("owner_id", user.id);
 
+        // Then get a list of the worlds where they are just a member
         const { data: memberData, error: memberError } = await supabase
           .from("World_Members")
           .select("world_id")
@@ -70,6 +89,7 @@ export default function worldChoice() {
 
         let memberWorlds: any[] = [];
 
+        // If they belong to any worlds as a member, go get the full details of those worlds
         if (memberData && memberData.length > 0) {
           const worldIds = memberData.map((m) => m.world_id);
 
@@ -85,38 +105,45 @@ export default function worldChoice() {
           }
         }
 
+        // We use a Map to make sure we don't accidentally show the same world twice
         const allWorldsMap = new Map();
 
+        // Add the worlds they own, and mark them as the "OWNER"
         ownedWorlds?.forEach((w) => {
           allWorldsMap.set(w.id, { ...w, role: ROLES.OWNER });
         });
 
+        // Add the worlds they are a member of, and mark them as "MEMBER"
         memberWorlds.forEach((w) => {
           if (w && !allWorldsMap.has(w.id)) {
             allWorldsMap.set(w.id, { ...w, role: ROLES.MEMBER });
           }
         });
 
+        // Save all the worlds so we can show them on the screen
         setUserWorlds(Array.from(allWorldsMap.values()));
       }
 
+      // Tell the page we are done loading
       setReady(true);
     }
 
     checkUserAndWorld();
   }, []);
 
+  // Run when the user types a name and clicks "Create World"
   async function handleCreateWorld() {
+    // If they didn't type a name, do nothing
     if (!newWorldName) return;
 
+    // Check who is logged in
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (user) {
-      // Seed every new world with the default attributes, rarities and
-      // classes so admin and create pages never see empty/inconsistent
-      // lists. The defaults live in lib/worldDefaults.ts
+      // We give every new world some default starting options.
+      // The default options are stored in lib/worldDefaults.ts
       const { data, error } = await supabase
         .from("World")
         .insert({
@@ -129,11 +156,13 @@ export default function worldChoice() {
         .select()
         .single();
 
+      // If it worked, hide the popup, clear the name, and send them to their new world
       if (!error && data) {
         setShowModal(false);
         setNewWorldName("");
         router.push(`/worldDashboard/${data.id}`);
       } else {
+        // If it failed, show an error
         alert("Error creating world: " + (error?.message || "Unknown error"));
       }
     } else {

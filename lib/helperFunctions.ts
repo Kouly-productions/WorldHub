@@ -1,5 +1,4 @@
-// Small helpers for reading the World table.
-
+// Small helper functions that clean up data coming from the database.
 import {
   DEFAULT_ATTRIBUTES,
   DEFAULT_CLASSES,
@@ -8,17 +7,18 @@ import {
   type WorldRarity,
 } from "@/lib/worldDefaults";
 
-// Take the raw attributes JSON from the DB and turn it into a clean list.
-// Returns the defaults if the column is empty or doesn't look right.
+// Takes the raw attribute data (like Strength or Speed) from the database and cleans it up.
+// If the database has nothing saved, returns the default attributes.
 export function parseAttributes(raw: unknown): WorldAttribute[] {
   if (!Array.isArray(raw) || raw.length === 0) {
     return DEFAULT_ATTRIBUTES;
   }
+  
+  // Go through the list and make sure every attribute has the right pieces (name and color)
   const cleaned: WorldAttribute[] = raw
     .filter((a: any) => a && typeof a.name === "string" && a.name.trim())
     .map((a: any) => ({
-      // The id is what links a character's attribute_values to the world's
-      // attribute. If it's missing make one from the name as a fallback.
+      // The id is used to link characters to this stat. If it's missing, we make one out of the name.
       id:
         typeof a.id === "string" && a.id.trim()
           ? a.id.trim()
@@ -33,12 +33,13 @@ export function parseAttributes(raw: unknown): WorldAttribute[] {
   return cleaned.length > 0 ? cleaned : DEFAULT_ATTRIBUTES;
 }
 
-// Same idea for rarities. Drops anything without a name and falls back to
-// the defaults if nothing is left.
+// Does the exact same thing but for item rarities (like "Common" or "Epic").
 export function parseRarities(raw: unknown): WorldRarity[] {
   if (!Array.isArray(raw) || raw.length === 0) {
     return DEFAULT_RARITIES;
   }
+  
+  // Clean up the list of rarities
   const cleaned: WorldRarity[] = raw
     .filter((r: any) => r && typeof r.name === "string" && r.name.trim())
     .map((r: any) => ({
@@ -48,11 +49,14 @@ export function parseRarities(raw: unknown): WorldRarity[] {
   return cleaned.length > 0 ? cleaned : DEFAULT_RARITIES;
 }
 
-// Classes are stored as "Warrior,Mage,Rogue" so we just split on comma.
+// Classes are saved as a single text line like "Warrior,Mage,Rogue".
+// This splits that text into a real list of separate words.
 export function parseClasses(raw: unknown): string[] {
   if (typeof raw !== "string" || !raw.trim()) {
     return DEFAULT_CLASSES;
   }
+  
+  // Split the text whenever there is a comma
   const list = raw
     .split(",")
     .map((c) => c.trim())

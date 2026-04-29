@@ -6,24 +6,41 @@ import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import LoadingScreen from "@/components/LoadingScreen";
 
+// Profile page where the user can see their details and log out
 export default function ProfilePage() {
+  // router helps us move the user to another page
   const router = useRouter();
+
+  // Rmember the logged-in user's information
   const [user, setUser] = useState<any>(null);
+
+  // Remember if we are still checking the user's information
   const [loading, setLoading] = useState(true);
 
+  // Run exactly once when the profile page opens
   useEffect(() => {
+    // Check who is currently logged in
     async function getUser() {
+      // Ask Supabase for the user details
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
+      // Save the user details and stop the loading screen
       setUser(user);
       setLoading(false);
     }
+
+    // Run the check
     getUser();
   }, []);
 
+  // Run when the user clicks "Log out"
   async function handleLogout() {
+    // Tell Supabase to sign the user out
     await supabase.auth.signOut();
+
+    // Send the user back to the login page and refresh
     router.push("/login");
     router.refresh();
   }

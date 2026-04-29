@@ -5,52 +5,67 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function RegisterPage() {
+  // These states remember what the user types in the input boxes
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+
+  // Remember if we are currently saving the account (to show a loading button)
   const [loading, setLoading] = useState(false);
+
+  // Remember any success or error messages to show the user
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
+  // Run when the user clicks "Create Account"
   const handleSignUp = async (e: React.FormEvent) => {
+    // Stops the page from refreshing
     e.preventDefault();
+
+    // Show the loading state and clear old messages
     setLoading(true);
     setMessage(null);
 
     try {
-      // First, create the user in Supabase Auth
+      // First, tell Supabase to create a new user login
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
       });
 
+      // If something went wrong, stop and throw an error
       if (authError) throw authError;
 
+      // If the user login was created successfully...
       if (authData.user) {
-        // Then save the username in Profiles, using the auth ID to link them
+        // then we save their username in our Profiles table in the database
         const { error: profileError } = await supabase.from("Profiles").insert([
           {
-            id: authData.user.id,
+            id: authData.user.id, // We use the same ID as the login to link them
             username: username,
             email: email,
           },
         ]);
 
+        // If saving the profile failed, stop and throw an error
         if (profileError) throw profileError;
 
+        // If everything worked, show a green success message
         setMessage({
           type: "success",
           text: "User created successfully!",
         });
       }
     } catch (error: any) {
+      // If any of the steps failed, show a red error message
       setMessage({
         type: "error",
         text: error.message || "Something went wrong during registration.",
       });
     } finally {
+      // No matter if it succeeded or failed, we stop the loading state
       setLoading(false);
     }
   };

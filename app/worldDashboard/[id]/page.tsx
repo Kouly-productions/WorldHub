@@ -11,35 +11,40 @@ import { parseAttributes } from "@/lib/helperFunctions";
 import { ROLES, canManageWorld } from "@/lib/roles";
 
 export default function WorldDashboard() {
+  // params gets the information from the URL (like the world ID)
   const params = useParams();
   const router = useRouter();
-  const worldId = params.id as string;
-  const [worldData, setWorldData] = useState<any>(null);
-  const [npcs, setNpcs] = useState<any[]>([]);
-  const [players, setPlayers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [members, setMembers] = useState<any[]>([]);
 
-  // Invite modal state
+  // We get the world ID from the URL so we know which world to show
+  const worldId = params.id as string;
+
+  // These states remember all the data we load from the database
+  const [worldData, setWorldData] = useState<any>(null); // Details about the world itself
+  const [npcs, setNpcs] = useState<any[]>([]); // Non player characters
+  const [players, setPlayers] = useState<any[]>([]); // Real players
+  const [loading, setLoading] = useState(true); // Is the page still loading?
+  const [userRole, setUserRole] = useState<string | null>(null); // Is the user an Owner, Admin, or Member?
+  const [members, setMembers] = useState<any[]>([]); // List of all people in the world
+
+  // States for the Invite People popup
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Inventory modal state
+  // States for the Character Inventory popup (showing what items a character holds)
   const [inventoryCharacter, setInventoryCharacter] = useState<any | null>(
     null,
   );
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [isLoadingInventory, setIsLoadingInventory] = useState(false);
 
-  // World items catalog state
+  // States for the World Items popup (showing all items that exist in this world)
   const [worldItems, setWorldItems] = useState<any[]>([]);
   const [isLoadingWorldItems, setIsLoadingWorldItems] = useState(false);
   const [isItemsCatalogOpen, setIsItemsCatalogOpen] = useState(false);
 
-  // Create item form state
+  // States for creating a brand new item in the world
   const [isCreateItemModalOpen, setIsCreateItemModalOpen] = useState(false);
   const [newItem, setNewItem] = useState({
     name: "",
@@ -48,15 +53,17 @@ export default function WorldDashboard() {
     rarity: "Common",
   });
   const [isCreatingItem, setIsCreatingItem] = useState(false);
-  // Holds the file the user picked for the item image
-  // Image gets uploaded when the form is submitted, not when picked.
+
+  // This remembers the image file the user picked for the new item.
+  // We don't upload it until they click "Save".
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
   const [itemImagePreview, setItemImagePreview] = useState<string | null>(null);
 
-  // Add-item-to-character picker state
+  // States for the popup that give an item to a specific character
   const [isAddItemPickerOpen, setIsAddItemPickerOpen] = useState(false);
   const [addingItemId, setAddingItemId] = useState<string | null>(null);
 
+  // Get all the items that exist in this world from the database
   async function fetchWorldItems() {
     setIsLoadingWorldItems(true);
     try {

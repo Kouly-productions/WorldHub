@@ -5,29 +5,44 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
+// This is the login page where users type their email and password
 export default function LoginPage() {
+  // router helps us move the user to another page after they log in
   const router = useRouter();
+
+  // These are states they remember what the user types in the boxes
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // This remembers if there was an error (like a wrong password)
   const [error, setError] = useState("");
+
+  // This remembers if we are currently trying to log in (so we can show a loading button)
   const [loading, setLoading] = useState(false);
 
+  // This function runs when the user clicks the "Login" button
   async function handleLogin(e: React.FormEvent) {
+    // This stops the page from refreshing when we submit the form
     e.preventDefault();
+
+    // Clear any old errors and show the loading state
     setError("");
     setLoading(true);
 
+    // Ask Supabase to check the email and password
     const { error: loginError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
+    // If something went wrong, show the error message and stop loading
     if (loginError) {
       setError(loginError.message);
       setLoading(false);
       return;
     }
 
+    // If login was successful, send the user to the world choice page
     router.push("/worldChoice");
   }
 

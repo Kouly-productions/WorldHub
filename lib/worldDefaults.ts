@@ -1,7 +1,6 @@
-// All the defaults a brand new world starts with.
-// If you want to change a default (a color, a class name, etc.), do it here
-// and not in the individual pages.
+// Stores all the default settings that a brand new world starts with.
 
+// This defines what an "Attribute" (like Strength) should look like
 export type WorldAttribute = {
   id: string;
   name: string;
@@ -9,13 +8,13 @@ export type WorldAttribute = {
   max: number;
 };
 
+// This defines what a "Rarity" (like Epic or Legendary) should look like
 export type WorldRarity = {
   name: string;
   color: string;
 };
 
-// The ids match the legacy column names so old characters (which only have
-// data in strength/dexterity/etc.) still show up correctly.
+// The default attributes every new world gets automatically
 export const DEFAULT_ATTRIBUTES: WorldAttribute[] = [
   { id: "strength", name: "Strength", color: "#ef4444", max: 30 },
   { id: "dexterity", name: "Dexterity", color: "#22c55e", max: 30 },
@@ -25,6 +24,7 @@ export const DEFAULT_ATTRIBUTES: WorldAttribute[] = [
   { id: "charisma", name: "Charisma", color: "#ec4899", max: 30 },
 ];
 
+// The default rarities for characters that every new world gets automatically
 export const DEFAULT_RARITIES: WorldRarity[] = [
   { name: "Common", color: "#9ca3af" },
   { name: "Uncommon", color: "#22c55e" },
@@ -33,6 +33,7 @@ export const DEFAULT_RARITIES: WorldRarity[] = [
   { name: "Legendary", color: "#f59e0b" },
 ];
 
+// The default classes a character can choose from in a new world
 export const DEFAULT_CLASSES: string[] = [
   "Warrior",
   "Mage",
