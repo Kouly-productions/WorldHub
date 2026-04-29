@@ -20,7 +20,7 @@ export default function RegisterPage() {
     setMessage(null);
 
     try {
-      // First, I create the user in Supabase Auth
+      // First, create the user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,

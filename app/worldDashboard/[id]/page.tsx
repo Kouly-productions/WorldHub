@@ -6,10 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import { Search, X, Backpack, Plus, Trash2 } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
-import {
-  DEFAULT_ATTRIBUTES,
-  type WorldAttribute,
-} from "@/lib/worldDefaults";
+import { DEFAULT_ATTRIBUTES, type WorldAttribute } from "@/lib/worldDefaults";
 
 export default function WorldDashboard() {
   const params = useParams();
@@ -459,7 +456,6 @@ export default function WorldDashboard() {
   };
 
   // The list of attributes for this world. Falls back to the shared default
-  // attributes (using legacy column names as IDs) so old characters still
   // render correctly even before the admin defines anything.
   const worldAttributes: WorldAttribute[] = (() => {
     if (
@@ -622,26 +618,37 @@ export default function WorldDashboard() {
         {/* Divider */}
         <div className="mx-5 my-2 flex items-center gap-2">
           <div className="flex-1 h-px bg-linear-to-r from-transparent via-white/20 to-transparent" />
-          <div className="w-1.5 h-1.5 rotate-45 border" style={rs.borderStyle} />
+          <div
+            className="w-1.5 h-1.5 rotate-45 border"
+            style={rs.borderStyle}
+          />
           <div className="flex-1 h-px bg-linear-to-r from-transparent via-white/20 to-transparent" />
         </div>
 
         {/* Info grid - 2 columns like the reference */}
         <div className="px-5 py-2 grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
           <div className="flex items-center gap-2">
-            <span className="text-xs" style={rs.accentStyle}>&#9672;</span>
+            <span className="text-xs" style={rs.accentStyle}>
+              &#9672;
+            </span>
             <span className="text-white/70">{char.gender || "Unknown"}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs" style={rs.accentStyle}>&#9672;</span>
+            <span className="text-xs" style={rs.accentStyle}>
+              &#9672;
+            </span>
             <span className="text-white/70">{char.class || "Warrior"}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs" style={rs.accentStyle}>&#9672;</span>
+            <span className="text-xs" style={rs.accentStyle}>
+              &#9672;
+            </span>
             <span className="text-white/70">Age {char.age || "?"}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs" style={rs.accentStyle}>&#9672;</span>
+            <span className="text-xs" style={rs.accentStyle}>
+              &#9672;
+            </span>
             <span className="text-white/70">
               {char.relationship_status || "Single"}
             </span>
@@ -651,22 +658,25 @@ export default function WorldDashboard() {
         {/* Divider */}
         <div className="mx-5 my-2 flex items-center gap-2">
           <div className="flex-1 h-px bg-linear-to-r from-transparent via-white/20 to-transparent" />
-          <div className="w-1.5 h-1.5 rotate-45 border" style={rs.borderStyle} />
+          <div
+            className="w-1.5 h-1.5 rotate-45 border"
+            style={rs.borderStyle}
+          />
           <div className="flex-1 h-px bg-linear-to-r from-transparent via-white/20 to-transparent" />
         </div>
 
-        {/* Stat boxes - dynamically built from world.attributes. Each box
-            shows a short 3-letter label + the character's value for that
+        {/* Stat boxes, dynamically built from world.attributes. Each box
+            shows a short 3 letter label + the character's value for that
             attribute. Falls back to legacy strength/dex/etc. columns for
             characters that haven't been migrated to attribute_values yet. */}
         {worldAttributes.length > 0 && (
           <div className="px-3 pb-2 pt-1 grid grid-cols-3 gap-1.5">
             {worldAttributes.map((attr) => {
               // Prefer the JSONB attribute_values, then the legacy column with
-              // the matching name (for back-compat).
+              // the matching name (for back compat).
               const value =
                 char.attribute_values?.[attr.id] ?? char[attr.id] ?? null;
-              // Short 3-letter label for the box (e.g. "Strength" -> "STR").
+              // Short 3 letter label for the box ("Strength" -> "STR").
               const shortLabel = attr.name.slice(0, 3).toUpperCase();
               return (
                 <div
