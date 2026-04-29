@@ -10,6 +10,7 @@ import {
   DEFAULT_CLASSES,
   DEFAULT_RARITIES,
 } from "@/lib/worldDefaults";
+import { ROLES } from "@/lib/roles";
 import LoadingScreen from "@/components/LoadingScreen";
 
 export default function worldChoice() {
@@ -87,12 +88,12 @@ export default function worldChoice() {
         const allWorldsMap = new Map();
 
         ownedWorlds?.forEach((w) => {
-          allWorldsMap.set(w.id, { ...w, role: "owner" });
+          allWorldsMap.set(w.id, { ...w, role: ROLES.OWNER });
         });
 
         memberWorlds.forEach((w) => {
           if (w && !allWorldsMap.has(w.id)) {
-            allWorldsMap.set(w.id, { ...w, role: "member" });
+            allWorldsMap.set(w.id, { ...w, role: ROLES.MEMBER });
           }
         });
 
@@ -334,12 +335,12 @@ export default function worldChoice() {
                   <div className="flex items-center gap-2">
                     <span
                       className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider ${
-                        world.role === "owner"
+                        world.role === ROLES.OWNER
                           ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
                           : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                       }`}
                     >
-                      {world.role === "owner" ? "Owner" : "Member"}
+                      {world.role === ROLES.OWNER ? "Owner" : "Member"}
                     </span>
                   </div>
                 </div>

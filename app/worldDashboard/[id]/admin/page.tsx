@@ -22,6 +22,7 @@ import {
   parseClasses,
   parseRarities,
 } from "@/lib/helperFunctions";
+import { ROLES, canManageWorld } from "@/lib/roles";
 
 export default function AdminPanel() {
   const params = useParams();
@@ -94,7 +95,7 @@ export default function AdminPanel() {
       setRarities(parseRarities(world.rarities));
 
       // Need to figure out what role the current user has
-      let role = "member";
+      let role: string = ROLES.MEMBER;
       const { data: memberData } = await supabase
         .from("World_Members")
         .select("role")
@@ -105,13 +106,13 @@ export default function AdminPanel() {
       if (memberData) {
         role = memberData.role;
       } else if (world.owner_id === user.id) {
-        role = "owner";
+        role = ROLES.OWNER;
       }
 
       setUserRole(role);
 
       // Redirect non admins
-      if (role !== "owner" && role !== "admin") {
+      if (!canManageWorld(role)) {
         router.push(`/worldDashboard/${worldId}`);
         return;
       }
@@ -145,7 +146,7 @@ export default function AdminPanel() {
 
   async function handleRoleChange(memberId: string, newRole: string) {
     // Only the owner should be able to promote to owner
-    if (userRole !== "owner" && newRole === "owner") return;
+    if (userRole !== ROLES.OWNER && newRole === ROLES.OWNER) return;
 
     try {
       const { error } = await supabase
@@ -220,7 +221,7 @@ export default function AdminPanel() {
         .insert({
           world_id: worldId,
           user_id: userId,
-          role: "member",
+          role: ROLES.MEMBER,
         })
         .select()
         .single();
@@ -316,12 +317,7 @@ export default function AdminPanel() {
   }
 
   function handleRemoveAttribute(index: number) {
-    if (
-      !confirm(
-        "Remove this attribute? Existing characters will keep their saved value but it won't show until you re-add an attribute with the same ID.",
-      )
-    )
-      return;
+    if (!confirm("Remove this attribute?")) return;
     setAttributes((prev) => prev.filter((_, i) => i !== index));
   }
 
@@ -447,7 +443,7 @@ export default function AdminPanel() {
     return <LoadingScreen message="Loading admin panel..." />;
   }
 
-  if (userRole !== "owner" && userRole !== "admin") {
+  if (!canManageWorld(userRole)) {
     return null; // Will be redirected in useEffect
   }
 
@@ -553,21 +549,22 @@ export default function AdminPanel() {
                             handleRoleChange(member.id, e.target.value)
                           }
                           disabled={
-                            userRole !== "owner" || member.role === "owner"
+                            userRole !== ROLES.OWNER ||
+                            member.role === ROLES.OWNER
                           }
                           className="bg-black border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-orange-500 disabled:opacity-50"
                         >
-                          <option value="member">Member</option>
-                          <option value="admin">Admin</option>
-                          {userRole === "owner" && (
-                            <option value="owner">Owner</option>
+                          <option value={ROLES.MEMBER}>Member</option>
+                          <option value={ROLES.ADMIN}>Admin</option>
+                          {userRole === ROLES.OWNER && (
+                            <option value={ROLES.OWNER}>Owner</option>
                           )}
                         </select>
 
                         {/* Kick Button */}
                         <button
                           onClick={() => handleKickMember(member.id)}
-                          disabled={member.role === "owner"}
+                          disabled={member.role === ROLES.OWNER}
                           className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                           title="Kick"
                         >
@@ -916,7 +913,7 @@ export default function AdminPanel() {
                   </button>
                 </div>
 
-                {userRole === "owner" && (
+                {userRole === ROLES.OWNER && (
                   <div className="mt-12 pt-6 border-t border-red-500/30">
                     <h3 className="text-red-400 font-bold mb-2">Danger Zone</h3>
                     <p className="text-sm text-white/50 mb-4">

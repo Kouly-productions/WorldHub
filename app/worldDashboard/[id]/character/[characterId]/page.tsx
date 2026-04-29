@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Heart, ThumbsDown, Plus, X } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { ROLES, canManageWorld } from "@/lib/roles";
 import LoadingScreen from "@/components/LoadingScreen";
 
 // Each character has its own page now. URL looks like:
@@ -69,7 +70,7 @@ export default function CharacterPage() {
             .single();
 
           if (world?.owner_id === user.id) {
-            setUserRole("owner");
+            setUserRole(ROLES.OWNER);
           }
         }
       }
@@ -170,7 +171,7 @@ export default function CharacterPage() {
 
   // canEdit decides if we show the buttons for adding and removing items.
   // Only owner and admin can change the character here.
-  const canEdit = userRole === "owner" || userRole === "admin";
+  const canEdit = canManageWorld(userRole);
 
   const likes = splitToList(character.likes);
   const dislikes = splitToList(character.dislikes);

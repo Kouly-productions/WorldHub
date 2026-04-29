@@ -8,6 +8,7 @@ import { Search, X, Backpack, Plus, Trash2 } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
 import { type WorldAttribute } from "@/lib/worldDefaults";
 import { parseAttributes } from "@/lib/helperFunctions";
+import { ROLES, canManageWorld } from "@/lib/roles";
 
 export default function WorldDashboard() {
   const params = useParams();
@@ -289,7 +290,7 @@ export default function WorldDashboard() {
         .insert({
           world_id: worldId,
           user_id: userId,
-          role: "member",
+          role: ROLES.MEMBER,
         })
         .select()
         .single();
@@ -367,7 +368,7 @@ export default function WorldDashboard() {
           setUserRole(memberData.role);
         } else if (world?.owner_id === user.id) {
           // Fallback, owner might not be in the members table yet
-          setUserRole("owner");
+          setUserRole(ROLES.OWNER);
         }
       }
 
@@ -691,7 +692,7 @@ export default function WorldDashboard() {
               <Backpack className="w-3.5 h-3.5" />
               Inventory
             </button>
-            {(userRole === "owner" || userRole === "admin") && (
+            {canManageWorld(userRole) && (
               <>
                 <button
                   onClick={(e) => {
@@ -744,7 +745,7 @@ export default function WorldDashboard() {
             {worldData.name}
           </h1>
           <div className="flex gap-3">
-            {(userRole === "owner" || userRole === "admin") && (
+            {canManageWorld(userRole) && (
               <>
                 <Link
                   href={`/worldDashboard/${worldId}/admin`}
@@ -965,7 +966,7 @@ export default function WorldDashboard() {
             </div>
 
             {/* Action bar */}
-            {(userRole === "owner" || userRole === "admin") && (
+            {canManageWorld(userRole) && (
               <div className="flex justify-end px-5 pt-4">
                 <button
                   onClick={openAddItemPicker}
@@ -997,8 +998,7 @@ export default function WorldDashboard() {
                     const item = entry.Items;
                     if (!item) return null;
                     const rc = rarityConfig[item.rarity] || rarityConfig.Common;
-                    const canManage =
-                      userRole === "owner" || userRole === "admin";
+                    const canManage = canManageWorld(userRole);
                     return (
                       <div
                         key={entry.id}
