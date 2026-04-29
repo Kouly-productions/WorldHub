@@ -1,8 +1,6 @@
-// These are inserted into the World row at creation time, AND used as a
-// fallback by every page that reads world settings
-// world has NULL columns the user still sees something.
-//
-// If any defaults should be changed, it should be here, not in individual pages.
+// All the defaults a brand new world starts with.
+// If you want to change a default (a color, a class name, etc.), do it here
+// and not in the individual pages.
 
 export type WorldAttribute = {
   id: string;
@@ -16,6 +14,8 @@ export type WorldRarity = {
   color: string;
 };
 
+// The ids match the legacy column names so old characters (which only have
+// data in strength/dexterity/etc.) still show up correctly.
 export const DEFAULT_ATTRIBUTES: WorldAttribute[] = [
   { id: "strength", name: "Strength", color: "#ef4444", max: 30 },
   { id: "dexterity", name: "Dexterity", color: "#22c55e", max: 30 },

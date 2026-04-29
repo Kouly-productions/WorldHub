@@ -12,16 +12,23 @@ import {
   type WorldAttribute,
   type WorldRarity,
 } from "@/lib/worldDefaults";
+import {
+  parseAttributes,
+  parseClasses,
+  parseRarities,
+} from "@/lib/helperFunctions";
 import LoadingScreen from "@/components/LoadingScreen";
 
-// One shared form for all three character flows
+// Same form is used for creating NPCs, creating players and editing.
+// The mode prop just toggles a few things on/off (AI button, moderation,
+// insert vs update).
 
 export type CharacterFormMode = "create-npc" | "create-player" | "edit";
 
 interface Props {
   worldId: string;
   mode: CharacterFormMode;
-  // Only required when mode === "edit"
+  // Only used when mode is "edit"
   characterId?: string;
 }
 
@@ -49,12 +56,11 @@ function SectionDivider({ label }: { label: string }) {
 export default function CharacterForm({ worldId, mode, characterId }: Props) {
   const router = useRouter();
 
-  // Mode derived flags. Keeping them as small variables rather than scattering
-  // mode checks throughout the JSX keeps the markup readable.
+  // Pull the mode-specific bits out so the JSX further down stays clean.
   const showAI = mode === "create-npc";
   const runsModeration = mode === "create-npc";
   const isEdit = mode === "edit";
-  const isNpc = mode !== "create-player"; // edit/npc both store as NPC by default
+  const isNpc = mode !== "create-player";
   const title =
     mode === "create-npc"
       ? "Create New NPC"
@@ -69,17 +75,14 @@ export default function CharacterForm({ worldId, mode, characterId }: Props) {
         : "Create Player";
   const submitLoadingLabel = mode === "edit" ? "Saving..." : "Creating...";
 
-  // Loading flags
-  // loading is for the submit button fetching is the initial fetch in edit mode.
+  // loading = submit button spinner, fetching = initial load in edit mode
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
 
-  // Avatar / portrait upload state
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
-  // Form fields
-  // Note: stat values live in attributeValues below since they're dynamic.
+  // Stat values are kept separate in attributeValues since the list is dynamic
   const [formData, setFormData] = useState({
     name: "",
     biography: "",
@@ -95,12 +98,13 @@ export default function CharacterForm({ worldId, mode, characterId }: Props) {
     full_health: 100,
   });
 
-  // Character's stat values, keyed by attribute id from world.attributes.
+  // Stat values keyed by attribute id
   const [attributeValues, setAttributeValues] = useState<
     Record<string, number>
   >({});
 
-  // World driven option lists
+  // These get replaced once the world loads. Defaults are just so the form
+  // has something to show before the network call comes back.
   const [attributes, setAttributes] =
     useState<WorldAttribute[]>(DEFAULT_ATTRIBUTES);
   const [availableClasses, setAvailableClasses] =
@@ -108,13 +112,12 @@ export default function CharacterForm({ worldId, mode, characterId }: Props) {
   const [availableRarities, setAvailableRarities] =
     useState<WorldRarity[]>(DEFAULT_RARITIES);
 
-  // AI generation state
+  // Only used in NPC mode
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
 
-  // Load the world's settings once when the component mounts. This populates
-  // the dropdowns (classes, rarities) and the dynamic attribute list.
+  // Grab the world settings on mount so the dropdowns show the right options
   useEffect(() => {
     async function loadWorldSettings() {
       if (!worldId) return;
@@ -127,84 +130,40 @@ export default function CharacterForm({ worldId, mode, characterId }: Props) {
 
       if (!world) return;
 
-      // Attributes
-      let attrList: WorldAttribute[] = DEFAULT_ATTRIBUTES;
-      if (Array.isArray(world.attributes) && world.attributes.length > 0) {
-        const cleaned: WorldAttribute[] = world.attributes
-          .filter((a: any) => a && typeof a.name === "string" && a.name.trim())
-          .map((a: any) => ({
-            id:
-              typeof a.id === "string" && a.id.trim()
-                ? a.id.trim()
-                : a.name.trim().toLowerCase().replace(/\s+/g, "_"),
-            name: a.name.trim(),
-            color: typeof a.color === "string" ? a.color : "#9ca3af",
-            max:
-              typeof a.max === "number" && a.max > 0
-                ? Math.min(999, Math.floor(a.max))
-                : 30,
-          }));
-        if (cleaned.length > 0) attrList = cleaned;
-      }
-      setAttributes(attrList);
+      const attrList = parseAttributes(world.attributes);
+      const classList = parseClasses(world.classes);
+      const rarityList = parseRarities(world.rarities);
 
-      // Seed default values only when creating, in edit mode the actual
-      // character values come from fetchCharacter() below.
+      setAttributes(attrList);
+      setAvailableClasses(classList);
+      setAvailableRarities(rarityList);
+
+      // For create modes we snap the selected class/rarity to a valid one
+      // and give each attribute a sensible starting value. In edit mode we
+      // leave the saved values alone, otherwise we'd silently change them.
       if (!isEdit) {
         const seeded: Record<string, number> = {};
         attrList.forEach((a) => {
           seeded[a.id] = Math.min(10, a.max);
         });
         setAttributeValues(seeded);
-      }
 
-      // Classes
-      if (world.classes) {
-        const list = world.classes
-          .split(",")
-          .map((c: string) => c.trim())
-          .filter((c: string) => c.length > 0);
-
-        if (list.length > 0) {
-          setAvailableClasses(list);
-          // For create modes, snap to a valid value if the default doesn't fit.
-          // For edit, we keep the saved class even if it's no longer in the list.
-          if (!isEdit) {
-            setFormData((prev) =>
-              list.includes(prev.class) ? prev : { ...prev, class: list[0] },
-            );
-          }
-        }
-      }
-
-      // Rarities
-      if (Array.isArray(world.rarities) && world.rarities.length > 0) {
-        const cleaned: WorldRarity[] = world.rarities
-          .filter((r: any) => r && typeof r.name === "string" && r.name.trim())
-          .map((r: any) => ({
-            name: r.name.trim(),
-            color: typeof r.color === "string" ? r.color : "#9ca3af",
-          }));
-
-        if (cleaned.length > 0) {
-          setAvailableRarities(cleaned);
-          if (!isEdit) {
-            setFormData((prev) =>
-              cleaned.some((r) => r.name === prev.rarity)
-                ? prev
-                : { ...prev, rarity: cleaned[0].name },
-            );
-          }
-        }
+        setFormData((prev) => ({
+          ...prev,
+          class: classList.includes(prev.class) ? prev.class : classList[0],
+          rarity: rarityList.some((r) => r.name === prev.rarity)
+            ? prev.rarity
+            : rarityList[0].name,
+        }));
       }
     }
 
     loadWorldSettings();
   }, [worldId, isEdit]);
 
-  // In edit mode: fetch the existing character and populate the form.
-  // Rerun this when attributes changes too, so newly added world
-  // attributes get seeded with defaults for existing characters
+  // In edit mode: load the existing character's data into the form.
+  // This re-runs when attributes changes so a character that doesn't have a
+  // value for a newly added world attribute still gets a default of 10.
   useEffect(() => {
     if (!isEdit || !characterId) return;
 
@@ -234,8 +193,8 @@ export default function CharacterForm({ worldId, mode, characterId }: Props) {
           full_health: data.full_health || 100,
         });
 
-        // Load attribute values, preferring JSONB and falling back to the
-        // legacy strength/dex/etc. columns for old characters.
+        // We try the new JSONB column first and fall back to the old columns
+        // (strength, dexterity, ...) for characters made before the change.
         const stored =
           data.attribute_values && typeof data.attribute_values === "object"
             ? (data.attribute_values as Record<string, number>)
@@ -272,7 +231,6 @@ export default function CharacterForm({ worldId, mode, characterId }: Props) {
     fetchCharacter();
   }, [isEdit, characterId, attributes]);
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
   function updateAttributeValue(attr: WorldAttribute, delta: number) {
     setAttributeValues((prev) => {
       const current = prev[attr.id] ?? 1;
@@ -290,8 +248,8 @@ export default function CharacterForm({ worldId, mode, characterId }: Props) {
     }));
   }
 
-  // Pulls out the legacy column values from attributeValues so we can write
-  // them back to the legacy strength/dex/etc. columns for back-compat.
+  // Mirror the standard stats into the old columns too, so old code that
+  // still reads strength/dexterity/etc. directly keeps working.
   function buildLegacyColumns(): Record<string, number> {
     const out: Record<string, number> = {};
     LEGACY_ATTRIBUTE_KEYS.forEach((key) => {
@@ -303,8 +261,8 @@ export default function CharacterForm({ worldId, mode, characterId }: Props) {
   }
 
   async function uploadPortraitIfNeeded(): Promise<string | null> {
+    // No new file picked, keep the old portrait when editing, blank when creating
     if (!avatarFile) {
-      // In edit mode we keep whatever was already there (avatarPreview holds the existing URL).
       return isEdit ? avatarPreview : "";
     }
     const fileExt = avatarFile.name.split(".").pop();
@@ -325,7 +283,6 @@ export default function CharacterForm({ worldId, mode, characterId }: Props) {
     return publicUrl;
   }
 
-  // ── AI generation (create-npc only) ───────────────────────────────────────
   async function handleGenerateWithAI() {
     if (!aiPrompt.trim()) return;
     setAiLoading(true);
@@ -384,13 +341,12 @@ export default function CharacterForm({ worldId, mode, characterId }: Props) {
     }
   }
 
-  // create or update depending on mode
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // NPCs are moderated for inappropriate content before saving.
+      // NPC content gets a quick moderation check before we let it through.
       if (runsModeration) {
         const modRes = await fetch("/api/moderate-character", {
           method: "POST",
@@ -454,7 +410,6 @@ export default function CharacterForm({ worldId, mode, characterId }: Props) {
     }
   }
 
-  // Shared Tailwind classes
   const inputClass =
     "w-full bg-[#15120e] border border-amber-900/30 rounded px-3 py-2.5 text-white outline-none focus:border-amber-500/60 transition-colors text-sm";
   const selectClass = inputClass;
@@ -565,8 +520,8 @@ export default function CharacterForm({ worldId, mode, characterId }: Props) {
                   }
                   className={selectClass}
                 >
-                  {/* In edit mode, keep the character's saved class as an
-                      option even if it's no longer in the world's list. */}
+                  {/* If the character's saved class was removed from the world
+                      we still show it so we don't lose the value */}
                   {isEdit &&
                     formData.class &&
                     !availableClasses.includes(formData.class) && (
@@ -593,9 +548,8 @@ export default function CharacterForm({ worldId, mode, characterId }: Props) {
                 }
                 className={selectClass}
               >
-                {/* In edit mode, keep the character's saved rarity even if it
-                    was removed from the world. Marked as "(legacy)" so it's
-                    clear it's not part of the current list. */}
+                {/* Same idea as the class dropdown, keep the saved rarity if
+                    it's gone from the world, but mark it (legacy) so it's clear */}
                 {isEdit &&
                   formData.rarity &&
                   !availableRarities.some(

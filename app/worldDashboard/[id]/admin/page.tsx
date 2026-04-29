@@ -16,12 +16,12 @@ import {
   ChevronDown,
 } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
+import { type WorldAttribute, type WorldRarity } from "@/lib/worldDefaults";
 import {
-  DEFAULT_ATTRIBUTES,
-  DEFAULT_RARITIES,
-  type WorldAttribute,
-  type WorldRarity,
-} from "@/lib/worldDefaults";
+  parseAttributes,
+  parseClasses,
+  parseRarities,
+} from "@/lib/helperFunctions";
 
 export default function AdminPanel() {
   const params = useParams();
@@ -87,51 +87,11 @@ export default function AdminPanel() {
       setWorldData(world);
       setWorldName(world.name || "");
 
-      // Load attributes. If the column is empty/missing, fall back to defaults
-      if (Array.isArray(world.attributes) && world.attributes.length > 0) {
-        const cleaned: WorldAttribute[] = world.attributes
-          .filter((a: any) => a && typeof a.name === "string" && a.name.trim())
-          .map((a: any) => ({
-            id:
-              typeof a.id === "string" && a.id.trim()
-                ? a.id.trim()
-                : a.name.trim().toLowerCase().replace(/\s+/g, "_"),
-            name: a.name.trim(),
-            color: typeof a.color === "string" ? a.color : "#9ca3af",
-            max:
-              typeof a.max === "number" && a.max > 0
-                ? Math.min(999, Math.floor(a.max))
-                : 30,
-          }));
-        setAttributes(cleaned.length > 0 ? cleaned : DEFAULT_ATTRIBUTES);
-      } else {
-        setAttributes(DEFAULT_ATTRIBUTES);
-      }
-
-      // Load classes. The string "Warrior,Mage,..." gets split into an array.
-      const classList = world.classes
-        ? world.classes
-            .split(",")
-            .map((c: string) => c.trim())
-            .filter((c: string) => c.length > 0)
-        : [];
-      setClasses(classList);
-
-      // Load rarities. If the column is empty/missing, fall back to defaults.
-      if (Array.isArray(world.rarities) && world.rarities.length > 0) {
-        setRarities(
-          world.rarities
-            .filter(
-              (r: any) => r && typeof r.name === "string" && r.name.trim(),
-            )
-            .map((r: any) => ({
-              name: r.name.trim(),
-              color: typeof r.color === "string" ? r.color : "#9ca3af",
-            })),
-        );
-      } else {
-        setRarities(DEFAULT_RARITIES);
-      }
+      // The parse helpers handle empty/null columns by giving us the defaults,
+      // so admin never shows an empty list to the user.
+      setAttributes(parseAttributes(world.attributes));
+      setClasses(parseClasses(world.classes));
+      setRarities(parseRarities(world.rarities));
 
       // Need to figure out what role the current user has
       let role = "member";

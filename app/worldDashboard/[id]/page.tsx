@@ -6,7 +6,8 @@ import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import { Search, X, Backpack, Plus, Trash2 } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
-import { DEFAULT_ATTRIBUTES, type WorldAttribute } from "@/lib/worldDefaults";
+import { type WorldAttribute } from "@/lib/worldDefaults";
+import { parseAttributes } from "@/lib/helperFunctions";
 
 export default function WorldDashboard() {
   const params = useParams();
@@ -455,35 +456,13 @@ export default function WorldDashboard() {
     },
   };
 
-  // The list of attributes for this world. Falls back to the shared default
-  // render correctly even before the admin defines anything.
-  const worldAttributes: WorldAttribute[] = (() => {
-    if (
-      !Array.isArray(worldData?.attributes) ||
-      worldData.attributes.length === 0
-    ) {
-      return DEFAULT_ATTRIBUTES;
-    }
-    const cleaned: WorldAttribute[] = worldData.attributes
-      .filter((a: any) => a && typeof a.name === "string" && a.name.trim())
-      .map((a: any) => ({
-        id:
-          typeof a.id === "string" && a.id.trim()
-            ? a.id.trim()
-            : a.name.trim().toLowerCase().replace(/\s+/g, "_"),
-        name: a.name.trim(),
-        color: typeof a.color === "string" ? a.color : "#9ca3af",
-        max:
-          typeof a.max === "number" && a.max > 0
-            ? Math.min(999, Math.floor(a.max))
-            : 30,
-      }));
-    return cleaned.length > 0 ? cleaned : DEFAULT_ATTRIBUTES;
-  })();
+  // Defaults kick in if the admin hasn't customized the world yet
+  const worldAttributes: WorldAttribute[] = parseAttributes(
+    worldData?.attributes,
+  );
 
-  // Build a style object for a character's rarity based on the world's
-  // configured rarities (admin-defined). Falls back to a neutral gray if
-  // the rarity name isn't in the world's list (e.g. legacy character).
+  // Looks up the rarity color the admin picked. If the character has a rarity
+  // that's no longer in the world (legacy data) we just use gray.
   function getCharRarityStyle(rarityName: string) {
     const worldRarities: Array<{ name: string; color: string }> = Array.isArray(
       worldData?.rarities,
@@ -665,15 +644,10 @@ export default function WorldDashboard() {
           <div className="flex-1 h-px bg-linear-to-r from-transparent via-white/20 to-transparent" />
         </div>
 
-        {/* Stat boxes, dynamically built from world.attributes. Each box
-            shows a short 3 letter label + the character's value for that
-            attribute. Falls back to legacy strength/dex/etc. columns for
-            characters that haven't been migrated to attribute_values yet. */}
+        {/* Stat boxes, one per world attribute, with a 3 letter label */}
         {worldAttributes.length > 0 && (
           <div className="px-3 pb-2 pt-1 grid grid-cols-3 gap-1.5">
             {worldAttributes.map((attr) => {
-              // Prefer the JSONB attribute_values, then the legacy column with
-              // the matching name (for back compat).
               const value =
                 char.attribute_values?.[attr.id] ?? char[attr.id] ?? null;
               // Short 3 letter label for the box ("Strength" -> "STR").
